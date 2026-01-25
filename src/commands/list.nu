@@ -9,6 +9,7 @@ export def main [
     --trace                # Include files in trace/ subdirectories
     --tmp                  # Include files in tmp/ subdirectories
     --ref                  # Include files in ref/ subdirectory
+    --all(-a)              # Include all artifacts (trace, tmp, ref)
     --depth: int = 1       # Limit depth for ref/ (default: 1, 0 = unlimited)
 ] {
     # 1. Environment Checks
@@ -43,7 +44,7 @@ export def main [
     }
 
     # 4. Trace Files
-    if $trace {
+    if ($trace or $all) {
         let trace_dir = ($base_dir | path join "trace")
         if ($trace_dir | path exists) {
             let trace_files = (glob $"($trace_dir)/**/*" --no-dir)
@@ -54,7 +55,7 @@ export def main [
     }
 
     # 5. Tmp Files
-    if $tmp {
+    if ($tmp or $all) {
         let tmp_dir = ($base_dir | path join "tmp")
         if ($tmp_dir | path exists) {
             let tmp_files = (glob $"($tmp_dir)/**/*" --no-dir)
@@ -65,7 +66,7 @@ export def main [
     }
 
     # 6. Ref Files
-    if $ref {
+    if ($ref or $all) {
         let ref_dir = ($base_dir | path join "ref")
         if ($ref_dir | path exists) {
             # Handle depth: 0 = unlimited, >0 = limit depth

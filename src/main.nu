@@ -40,10 +40,11 @@ def "main list" [
     --trace                # Include files in trace/ subdirectories
     --tmp                  # Include files in tmp/ subdirectories
     --ref                  # Include files in ref/ subdirectory
+    --all(-a)              # Include all artifacts (trace, tmp, ref)
     --depth: int = 1       # Limit depth for ref/ (default: 1, 0 = unlimited)
 ] {
     try {
-        list --trace=$trace --tmp=$tmp --ref=$ref --depth=$depth
+        list --trace=$trace --tmp=$tmp --ref=$ref --all=$all --depth=$depth
     } catch { |err|
         errors pretty-print $err
     }
