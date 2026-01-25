@@ -23,6 +23,10 @@ export def mem-branch-exists [] {
     (do { git rev-parse --verify $MEM_BRANCH_NAME } | complete).exit_code == 0
 }
 
+export def mem-branch-exists-on-remote [remote: string = "origin"] {
+    (do { git ls-remote --heads $remote $MEM_BRANCH_NAME } | complete).stdout | str trim | is-not-empty
+}
+
 export def ensure-worktree [] {
     let git_root = get-git-root
     let mem_path = ($git_root | path join $MEM_DIR_NAME)
@@ -32,10 +36,15 @@ export def ensure-worktree [] {
     }
     
     if (mem-branch-exists) {
-        # Just attach the existing branch
+        # Case 1: Local branch exists - attach it
+        git worktree add $mem_path $MEM_BRANCH_NAME
+    } else if (mem-branch-exists-on-remote) {
+        # Case 2: Branch exists on remote but not locally - fetch and checkout
+        print $"Found ($MEM_BRANCH_NAME) branch on remote, fetching..."
+        git fetch origin $"($MEM_BRANCH_NAME):($MEM_BRANCH_NAME)"
         git worktree add $mem_path $MEM_BRANCH_NAME
     } else {
-        # Create orphan branch with worktree in one step
+        # Case 3: Branch doesn't exist anywhere - create new orphan branch
         git worktree add --orphan -b $MEM_BRANCH_NAME $mem_path
         
         # Change to worktree directory to create initial commit
