@@ -3,8 +3,7 @@
 
 # Git helper functions for mem
 
-const MEM_DIR_NAME = ".mem"
-const MEM_BRANCH_NAME = "mem"
+use ../config.nu [MEM_DIR_NAME, MEM_BRANCH_NAME]
 
 export def is-git-repo [] {
     (do { git rev-parse --git-dir } | complete).exit_code == 0
@@ -58,4 +57,23 @@ export def worktree-exists [] {
     let worktrees = (git worktree list --porcelain | parse "{key} {value}")
     
     $worktrees | any {|w| $w.key == "worktree" and ($w.value | str trim) == $mem_path}
+}
+
+export def get-current-branch [] {
+    # Returns empty string if detached head
+    (do { git branch --show-current } | complete).stdout | str trim
+}
+
+export def get-current-commit-short [] {
+    git rev-parse --short HEAD | str trim
+}
+
+export def sanitize-branch-name [name: string] {
+    $name | str replace --all "/" "-"
+}
+
+export def get-mem-dir-for-branch [branch: string] {
+    let git_root = get-git-root
+    let sanitized = (sanitize-branch-name $branch)
+    $git_root | path join $MEM_DIR_NAME $sanitized
 }

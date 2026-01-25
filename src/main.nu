@@ -6,11 +6,29 @@
 
 use errors.nu
 use commands/init.nu
+use commands/add.nu
 
 # Initialize .mem directory structure
 def "main init" [] {
     try {
         init
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Create a new artifact file
+def "main add" [
+    filename: string       # Name of file to create
+    content?: string       # Content to write to file
+    --trace                # Save to trace/ directory
+    --tmp                  # Save to tmp/ directory
+    --ref                  # Save to refs/ directory
+    --commit: string       # Specify commit hash (requires --trace or --tmp)
+    --force(-f)            # Overwrite existing file
+] {
+    try {
+        add $filename $content --trace=$trace --tmp=$tmp --ref=$ref --commit=$commit --force=$force
     } catch { |err|
         errors pretty-print $err
     }
@@ -49,6 +67,7 @@ USAGE:
 
 SUBCOMMANDS:
     init       Initialize .mem directory structure
+    add        Create a new artifact file
     version    Show version information
     help       Show this help message
 
@@ -58,6 +77,8 @@ OPTIONS:
 
 EXAMPLES:
     mem init       # Initialize .mem in current git repository
+    mem add spec.md # Create a file
+    mem add note.txt "content" # Create a file with content
     mem version    # Show version
     mem help       # Show help
 "
