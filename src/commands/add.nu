@@ -15,18 +15,7 @@ export def main [
     --force(-f)            # Overwrite existing file
 ] {
     # 1. Environment Checks
-    if not (git_utils is-git-repo) {
-        error make {msg: "Not in a git repository"}
-    }
-    
-    if not (git_utils mem-dir-exists) {
-        error make {msg: "Run 'mem init' first"}
-    }
-    
-    let branch = (git_utils get-current-branch)
-    if ($branch | is-empty) {
-        error make {msg: "Not on a branch (detached HEAD)"}
-    }
+    let branch = (git_utils check-environment)
     
     # 2. Argument Validation
     if ($commit != null) and not ($trace or $tmp) {

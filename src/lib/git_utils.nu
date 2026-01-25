@@ -77,3 +77,20 @@ export def get-mem-dir-for-branch [branch: string] {
     let sanitized = (sanitize-branch-name $branch)
     $git_root | path join $MEM_DIR_NAME $sanitized
 }
+
+export def check-environment [] {
+    if not (is-git-repo) {
+        error make {msg: "Not in a git repository"}
+    }
+    
+    if not (mem-dir-exists) {
+        error make {msg: "Run 'mem init' first"}
+    }
+    
+    let branch = (get-current-branch)
+    if ($branch | is-empty) {
+        error make {msg: "Not on a branch (detached HEAD)"}
+    }
+    
+    $branch
+}
