@@ -27,72 +27,24 @@ export def main [
     mut files = []
 
     # 3. Root Files (always included)
-    # Only files directly in base_dir
-    let root_paths = (glob $"($base_dir)/*" --no-dir)
-    let root_ls = if ($root_paths | is-empty) { [] } else { ls ...$root_paths }
-    
-    if not ($root_ls | is-empty) {
-        $files = ($files | append ($root_ls | insert category "root" | insert hash null))
-    }
+    $files = ($files | append (scan-dir $base_dir "*" "root" false 0))
 
     # 4. Trace Files
     if ($trace or $all) {
         let trace_dir = ($base_dir | path join "trace")
-        if ($trace_dir | path exists) {
-            let trace_paths = (glob $"($trace_dir)/**/*" --no-dir)
-            let trace_ls = if ($trace_paths | is-empty) { [] } else { ls ...$trace_paths }
-            
-            if not ($trace_ls | is-empty) {
-                # Extract hash from path: .../trace/<hash>/filename
-                let processed = ($trace_ls | each {|f| 
-                    let relative = ($f.name | path relative-to $trace_dir)
-                    let components = ($relative | path split)
-                    let hash = if ($components | length) > 1 { $components | first } else { null }
-                    
-                    $f | insert category "trace" | insert hash $hash
-                })
-                $files = ($files | append $processed)
-            }
-        }
+        $files = ($files | append (scan-dir $trace_dir "**/*" "trace" true 0))
     }
 
     # 5. Tmp Files
     if ($tmp or $all) {
         let tmp_dir = ($base_dir | path join "tmp")
-        if ($tmp_dir | path exists) {
-            let tmp_paths = (glob $"($tmp_dir)/**/*" --no-dir)
-            let tmp_ls = if ($tmp_paths | is-empty) { [] } else { ls ...$tmp_paths }
-            
-            if not ($tmp_ls | is-empty) {
-                let processed = ($tmp_ls | each {|f| 
-                    let relative = ($f.name | path relative-to $tmp_dir)
-                    let components = ($relative | path split)
-                    let hash = if ($components | length) > 1 { $components | first } else { null }
-                    
-                    $f | insert category "tmp" | insert hash $hash
-                })
-                $files = ($files | append $processed)
-            }
-        }
+        $files = ($files | append (scan-dir $tmp_dir "**/*" "tmp" true 0))
     }
 
     # 6. Ref Files
     if ($ref or $all) {
         let ref_dir = ($base_dir | path join "ref")
-        if ($ref_dir | path exists) {
-            # Handle depth logic using glob
-            let ref_paths = if $depth == 0 {
-                glob $"($ref_dir)/**/*" --no-dir
-            } else {
-                glob $"($ref_dir)/**/*" --depth $depth --no-dir
-            }
-            
-            let ref_ls = if ($ref_paths | is-empty) { [] } else { ls ...$ref_paths }
-            
-            if not ($ref_ls | is-empty) {
-                $files = ($files | append ($ref_ls | insert category "ref" | insert hash null))
-            }
-        }
+        $files = ($files | append (scan-dir $ref_dir "**/*" "ref" false $depth))
     }
 
     # 7. Output
@@ -119,5 +71,40 @@ export def main [
         $result | to json
     } else {
         $result | get path | each { |it| print $it }
+    }
+}
+
+# Helper to glob and process files
+def scan-dir [
+    dir: string
+    pattern: string
+    category: string
+    extract_hash: bool
+    max_depth: int # 0 for unlimited
+] {
+    if not ($dir | path exists) {
+        return []
+    }
+
+    let paths = if $max_depth > 0 {
+        glob ($dir | path join $pattern) --depth $max_depth --no-dir
+    } else {
+        glob ($dir | path join $pattern) --no-dir
+    }
+    
+    if ($paths | is-empty) {
+        return []
+    }
+    
+    ls ...$paths | each {|f|
+        let hash = if $extract_hash {
+            let relative = ($f.name | path relative-to $dir)
+            let parts = ($relative | path split)
+            if ($parts | length) > 1 { $parts | first } else { null }
+        } else {
+            null
+        }
+        
+        $f | insert category $category | insert hash $hash
     }
 }
