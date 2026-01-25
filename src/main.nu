@@ -7,6 +7,7 @@
 use errors.nu
 use commands/init.nu
 use commands/add.nu
+use commands/list.nu
 
 # Initialize .mem directory structure
 def "main init" [] {
@@ -29,6 +30,20 @@ def "main add" [
 ] {
     try {
         add $filename $content --trace=$trace --tmp=$tmp --ref=$ref --commit=$commit --force=$force
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# List artifact files
+def "main list" [
+    --trace                # Include files in trace/ subdirectories
+    --tmp                  # Include files in tmp/ subdirectories
+    --ref                  # Include files in ref/ subdirectory
+    --depth: int = 1       # Limit depth for ref/ (default: 1, 0 = unlimited)
+] {
+    try {
+        list --trace=$trace --tmp=$tmp --ref=$ref --depth=$depth
     } catch { |err|
         errors pretty-print $err
     }
@@ -68,6 +83,7 @@ USAGE:
 SUBCOMMANDS:
     init       Initialize .mem directory structure
     add        Create a new artifact file
+    list       List artifacts for current branch
     version    Show version information
     help       Show this help message
 
@@ -79,6 +95,7 @@ EXAMPLES:
     mem init       # Initialize .mem in current git repository
     mem add spec.md # Create a file
     mem add note.txt "content" # Create a file with content
+    mem list --trace # List files including trace directory
     mem version    # Show version
     mem help       # Show help
 "
