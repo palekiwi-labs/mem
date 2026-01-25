@@ -9,7 +9,7 @@ use commands/init.nu
 use commands/add.nu
 use commands/list.nu
 
-# Initialize .mem directory structure
+# Initialize agent artifacts directory structure
 def "main init" [] {
     try {
         init
@@ -80,7 +80,7 @@ USAGE:
     mem <SUBCOMMAND> [OPTIONS]
 
 SUBCOMMANDS:
-    init       Initialize .mem directory structure
+    init       Initialize agent artifacts directory structure
     add        Create a new artifact file
     list       List artifacts (respects .gitignore)
     version    Show version information
@@ -91,7 +91,7 @@ OPTIONS:
     -h, --help     Show this help
 
 EXAMPLES:
-    mem init              # Initialize .mem in current git repository
+    mem init              # Initialize in current git repository
     mem add spec.md       # Create a file
     mem add note.txt \"content\" # Create a file with content
     mem list              # List files for current branch

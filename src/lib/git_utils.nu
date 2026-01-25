@@ -50,7 +50,7 @@ export def ensure-worktree [] {
     }
 }
 
-# Check if worktree exists at .mem/
+# Check if worktree exists at agent artifacts directory
 export def worktree-exists [] {
     let git_root = get-git-root
     let mem_path = ($git_root | path join $MEM_DIR_NAME)
