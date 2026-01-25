@@ -61,7 +61,7 @@ export def main [
     if $json {
         $output | to json
     } else {
-        $output | get path
+        $output | get path | str join "\n"
     }
 }
 
