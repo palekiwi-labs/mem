@@ -9,8 +9,7 @@ use ../lib/git_utils.nu
 export def main [] {
     # 1. Check if we're in a git repository
     if not (git_utils is-git-repo) {
-        print -e "Error: Not in a git repository"
-        exit 1
+        error make {msg: "Not in a git repository"}
     }
     
     # 2. Check if .mem/ already exists
@@ -21,8 +20,7 @@ export def main [] {
     
     # 3. Check if worktree already exists (edge case)
     if (git_utils worktree-exists) {
-        print -e "Error: .mem worktree already exists"
-        exit 1
+        error make {msg: ".mem worktree already exists"}
     }
 
     git_utils ensure-worktree
