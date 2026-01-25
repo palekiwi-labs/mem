@@ -94,3 +94,7 @@ export def check-environment [] {
     
     $branch
 }
+
+export def get-mem-dir-name [] {
+    $MEM_DIR_NAME
+}

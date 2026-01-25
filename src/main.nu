@@ -37,15 +37,12 @@ def "main add" [
 
 # List artifact files
 def "main list" [
-    --trace                # Include files in trace/ subdirectories
-    --tmp                  # Include files in tmp/ subdirectories
-    --ref                  # Include files in ref/ subdirectory
-    --all(-a)              # Include all artifacts (trace, tmp, ref)
-    --depth: int = 1       # Limit depth for ref/ (default: 1, 0 = unlimited)
+    --all(-a)              # List files for all branches
+    --depth: int = 0       # Limit depth (default: 0 = unlimited)
     --json(-j)             # Output in JSON format
 ] {
     try {
-        list --trace=$trace --tmp=$tmp --ref=$ref --all=$all --depth=$depth --json=$json
+        list --all=$all --depth=$depth --json=$json
     } catch { |err|
         errors pretty-print $err
     }
@@ -85,7 +82,7 @@ USAGE:
 SUBCOMMANDS:
     init       Initialize .mem directory structure
     add        Create a new artifact file
-    list       List artifacts for current branch
+    list       List artifacts (respects .gitignore)
     version    Show version information
     help       Show this help message
 
@@ -94,11 +91,14 @@ OPTIONS:
     -h, --help     Show this help
 
 EXAMPLES:
-    mem init       # Initialize .mem in current git repository
-    mem add spec.md # Create a file
-    mem add note.txt "content" # Create a file with content
-    mem list --trace # List files including trace directory
-    mem version    # Show version
-    mem help       # Show help
+    mem init              # Initialize .mem in current git repository
+    mem add spec.md       # Create a file
+    mem add note.txt \"content\" # Create a file with content
+    mem list              # List files for current branch
+    mem list --all        # List files for all branches
+    mem list --json       # List with metadata in JSON format
+    mem list --depth=2    # Limit directory depth
+    mem version           # Show version
+    mem help              # Show help
 "
 }
