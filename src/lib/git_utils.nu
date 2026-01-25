@@ -42,7 +42,7 @@ export def ensure-worktree [] {
         cd $mem_path
         
         # Create initial commit with .gitignore
-        let gitignore_content = "*/tmp/\n*/refs/\n"
+        let gitignore_content = "*/tmp/\n*/ref/\n"
         $gitignore_content | save --force .gitignore
         
         git add .gitignore

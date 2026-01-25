@@ -23,7 +23,7 @@ def "main add" [
     content?: string       # Content to write to file
     --trace                # Save to trace/ directory
     --tmp                  # Save to tmp/ directory
-    --ref                  # Save to refs/ directory
+    --ref                  # Save to ref/ directory
     --commit: string       # Specify commit hash (requires --trace or --tmp)
     --force(-f)            # Overwrite existing file
 ] {
