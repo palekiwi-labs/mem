@@ -3,34 +3,28 @@
 
 # Git helper functions for mem
 
-# Check if current directory is in a git repository
 export def is-git-repo [] {
     (do { git rev-parse --git-dir } | complete).exit_code == 0
 }
 
-# Get the git root directory
 export def get-git-root [] {
     git rev-parse --show-toplevel | str trim
 }
 
-# Check if .mem/ directory exists
 export def mem-dir-exists [] {
     let git_root = get-git-root
     let mem_path = ($git_root | path join ".mem")
     $mem_path | path exists
 }
 
-# Check if 'mem' branch exists
 export def mem-branch-exists [] {
     (do { git rev-parse --verify mem } | complete).exit_code == 0
 }
 
-# Ensure worktree exists at .mem/, creating branch if needed
 export def ensure-worktree [] {
     let git_root = get-git-root
     let mem_path = ($git_root | path join ".mem")
     
-    # Ensure .mem directory doesn't already exist
     if ($mem_path | path exists) {
         error make {msg: $".mem directory already exists at ($mem_path)"}
     }
