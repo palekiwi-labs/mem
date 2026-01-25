@@ -11,6 +11,7 @@ export def main [
     --ref                  # Include files in ref/ subdirectory
     --all(-a)              # Include all artifacts (trace, tmp, ref)
     --depth: int = 1       # Limit depth for ref/ (default: 1, 0 = unlimited)
+    --json(-j)             # Output in JSON format
 ] {
     # 1. Environment Checks
     let branch = (git_utils check-environment)
@@ -27,18 +28,30 @@ export def main [
 
     # 3. Root Files (always included)
     # Only files directly in base_dir
-    let root_files = (glob $"($base_dir)/*" --no-dir)
-    if not ($root_files | is-empty) {
-        $files = ($files | append $root_files)
+    let root_paths = (glob $"($base_dir)/*" --no-dir)
+    let root_ls = if ($root_paths | is-empty) { [] } else { ls ...$root_paths }
+    
+    if not ($root_ls | is-empty) {
+        $files = ($files | append ($root_ls | insert category "root" | insert hash null))
     }
 
     # 4. Trace Files
     if ($trace or $all) {
         let trace_dir = ($base_dir | path join "trace")
         if ($trace_dir | path exists) {
-            let trace_files = (glob $"($trace_dir)/**/*" --no-dir)
-            if not ($trace_files | is-empty) {
-                $files = ($files | append $trace_files)
+            let trace_paths = (glob $"($trace_dir)/**/*" --no-dir)
+            let trace_ls = if ($trace_paths | is-empty) { [] } else { ls ...$trace_paths }
+            
+            if not ($trace_ls | is-empty) {
+                # Extract hash from path: .../trace/<hash>/filename
+                let processed = ($trace_ls | each {|f| 
+                    let relative = ($f.name | path relative-to $trace_dir)
+                    let components = ($relative | path split)
+                    let hash = if ($components | length) > 1 { $components | first } else { null }
+                    
+                    $f | insert category "trace" | insert hash $hash
+                })
+                $files = ($files | append $processed)
             }
         }
     }
@@ -47,9 +60,18 @@ export def main [
     if ($tmp or $all) {
         let tmp_dir = ($base_dir | path join "tmp")
         if ($tmp_dir | path exists) {
-            let tmp_files = (glob $"($tmp_dir)/**/*" --no-dir)
-            if not ($tmp_files | is-empty) {
-                $files = ($files | append $tmp_files)
+            let tmp_paths = (glob $"($tmp_dir)/**/*" --no-dir)
+            let tmp_ls = if ($tmp_paths | is-empty) { [] } else { ls ...$tmp_paths }
+            
+            if not ($tmp_ls | is-empty) {
+                let processed = ($tmp_ls | each {|f| 
+                    let relative = ($f.name | path relative-to $tmp_dir)
+                    let components = ($relative | path split)
+                    let hash = if ($components | length) > 1 { $components | first } else { null }
+                    
+                    $f | insert category "tmp" | insert hash $hash
+                })
+                $files = ($files | append $processed)
             }
         }
     }
@@ -58,21 +80,44 @@ export def main [
     if ($ref or $all) {
         let ref_dir = ($base_dir | path join "ref")
         if ($ref_dir | path exists) {
-            # Handle depth: 0 = unlimited, >0 = limit depth
-            let ref_files = if $depth == 0 {
+            # Handle depth logic using glob
+            let ref_paths = if $depth == 0 {
                 glob $"($ref_dir)/**/*" --no-dir
             } else {
                 glob $"($ref_dir)/**/*" --depth $depth --no-dir
             }
-            if not ($ref_files | is-empty) {
-                $files = ($files | append $ref_files)
+            
+            let ref_ls = if ($ref_paths | is-empty) { [] } else { ls ...$ref_paths }
+            
+            if not ($ref_ls | is-empty) {
+                $files = ($files | append ($ref_ls | insert category "ref" | insert hash null))
             }
         }
     }
 
     # 7. Output
-    if not ($files | is-empty) {
-        $files | path relative-to $git_root | sort | each { |it| print $it }
+    if ($files | is-empty) {
         return
+    }
+
+    # Common post-processing
+    let result = ($files | each {|f|
+        let rel_path = ($f.name | path relative-to $git_root)
+        {
+            path: $rel_path
+            name: ($f.name | path basename)
+            category: $f.category
+            hash: $f.hash
+            branch: $branch
+            size: $f.size
+            modified: $f.modified
+            modified_ts: ($f.modified | into int)
+        }
+    } | sort-by modified -r)
+
+    if $json {
+        $result | to json
+    } else {
+        $result | get path | each { |it| print $it }
     }
 }

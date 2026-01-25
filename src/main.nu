@@ -42,9 +42,10 @@ def "main list" [
     --ref                  # Include files in ref/ subdirectory
     --all(-a)              # Include all artifacts (trace, tmp, ref)
     --depth: int = 1       # Limit depth for ref/ (default: 1, 0 = unlimited)
+    --json(-j)             # Output in JSON format
 ] {
     try {
-        list --trace=$trace --tmp=$tmp --ref=$ref --all=$all --depth=$depth
+        list --trace=$trace --tmp=$tmp --ref=$ref --all=$all --depth=$depth --json=$json
     } catch { |err|
         errors pretty-print $err
     }
