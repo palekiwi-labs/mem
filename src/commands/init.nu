@@ -3,41 +3,30 @@
 
 # Initialize .mem directory structure
 
-use ../lib/git.nu
+use ../lib/git_utils.nu
 
 # Initialize the .mem directory with orphan branch and worktree
 export def main [] {
     # 1. Check if we're in a git repository
-    if not (git is-git-repo) {
+    if not (git_utils is-git-repo) {
         print -e "Error: Not in a git repository"
         exit 1
     }
     
     # 2. Check if .mem/ already exists
-    if (git mem-dir-exists) {
+    if (git_utils mem-dir-exists) {
         print ".mem/ directory already exists. Already initialized?"
         exit 0
     }
     
     # 3. Check if worktree already exists (edge case)
-    if (git worktree-exists) {
+    if (git_utils worktree-exists) {
         print -e "Error: .mem worktree already exists"
         exit 1
     }
+
+    git_utils ensure-worktree
     
-    # 4. Create or use existing 'mem' branch
-    if not (git mem-branch-exists) {
-        print "Creating orphan branch 'mem'..."
-        git create-orphan-branch
-    } else {
-        print "Using existing 'mem' branch..."
-    }
-    
-    # 5. Add worktree at .mem/
-    print "Setting up worktree at .mem/..."
-    git add-worktree
-    
-    # 6. Success message
     print ""
     print "✓ Initialized .mem/ directory"
     print "✓ Orphan branch 'mem' ready"

@@ -25,35 +25,33 @@ export def mem-branch-exists [] {
     (do { git rev-parse --verify mem } | complete).exit_code == 0
 }
 
-# Create orphan branch 'mem'
-export def create-orphan-branch [] {
-    # Save current branch/commit to return to later
-    let current_ref = (git symbolic-ref --short HEAD | complete | get stdout | str trim)
-    
-    # Create orphan branch
-    git checkout --orphan mem
-    
-    # Clear staging area
-    git rm -rf . | complete | ignore
-    
-    # Create initial commit with .gitignore
-    let gitignore_content = "*/tmp/\n*/refs/\n"
-    $gitignore_content | save --force .gitignore
-    
-    git add .gitignore
-    git commit -m "Initialize mem branch"
-    
-    # Return to original branch
-    if $current_ref != "" {
-        git checkout $current_ref
-    }
-}
-
-# Add worktree at .mem/ for 'mem' branch
-export def add-worktree [] {
+# Ensure worktree exists at .mem/, creating branch if needed
+export def ensure-worktree [] {
     let git_root = get-git-root
     let mem_path = ($git_root | path join ".mem")
-    git worktree add $mem_path mem
+    
+    # Ensure .mem directory doesn't already exist
+    if ($mem_path | path exists) {
+        error make {msg: $".mem directory already exists at ($mem_path)"}
+    }
+    
+    if (mem-branch-exists) {
+        # Just attach the existing branch
+        git worktree add $mem_path mem
+    } else {
+        # Create orphan branch with worktree in one step
+        git worktree add --orphan -b mem $mem_path
+        
+        # Change to .mem directory to create initial commit
+        cd $mem_path
+        
+        # Create initial commit with .gitignore
+        let gitignore_content = "*/tmp/\n*/refs/\n"
+        $gitignore_content | save --force .gitignore
+        
+        git add .gitignore
+        git commit -m "Initialize mem branch"
+    }
 }
 
 # Check if worktree exists at .mem/
