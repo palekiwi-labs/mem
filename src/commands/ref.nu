@@ -98,7 +98,7 @@ def handle-github [
     let clone_url = $"https://github.com/($parts.repo_path).git"
     
     # Build clone command with optional depth
-    let depth_args = if ($depth | describe) == "nothing" {
+    let depth_args = if $depth == null {
         []
     } else {
         ["--depth" ($depth | into string)]
