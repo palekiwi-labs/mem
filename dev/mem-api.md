@@ -240,31 +240,48 @@ Delete temporary and reference files (cleanup).
 
 **Usage:**
 ```bash
-# Delete tmp/ and refs/ for current branch
+# Delete tmp/ and ref/ for current branch
 mem prune
 
-# Also delete trace/ (with confirmation)
-mem prune --trace
+# Delete for all branches
+mem prune --all
+
+# Skip confirmation
+mem prune --force
+
+# Delete for all branches, skip confirmation
+mem prune --all --force
 ```
 
 **Flags:**
-- `--trace` - Also delete `trace/` directory (destructive, requires confirmation)
+- `--all, -a` - Delete for all branches (requires confirmation)
+- `--force, -f` - Skip confirmation prompt
 
 **Behavior:**
-- Default: Deletes `.mem/<branch>/tmp/` and `.mem/<branch>/refs/`
-- With `--trace`: Also deletes `.mem/<branch>/trace/` (prompts for confirmation)
-- Confirmation prompt: "This will delete all tmp, refs, and trace files. Continue? (y/N)"
+- Default: Deletes `.agents/<branch>/tmp/` and `.agents/<branch>/ref/`
+- With `--all`: Deletes tmp/ and ref/ for all branches
+- Always prompts for confirmation unless `--force` is specified
+- Confirmation prompt (without --all): "Delete tmp/ and ref/ for branch '<branch>'? (y/N)"
+- Confirmation prompt (with --all): "Delete tmp/ and ref/ for ALL branches? This cannot be undone. (y/N)"
+- Only displays paths that were actually deleted (silent about non-existent directories)
+- `trace/` directory is never deleted by prune
 
 **Output:**
 ```
-Deleted: .mem/dev/tmp/
-Deleted: .mem/dev/refs/
+Deleted: .agents/dev/tmp/
+Deleted: .agents/dev/ref/
+```
+
+Or if nothing to delete:
+```
+Nothing to delete
 ```
 
 **Error cases:**
 - Not in a git repository → Error
-- `.mem/` doesn't exist → Error: "Run 'mem init' first"
-- User declines confirmation → Exit with message
+- `.agents/` doesn't exist → Error: "Run 'mem init' first"
+- User declines confirmation → Exit with message "Aborted"
+- Permission denied → Error with details
 
 ---
 
