@@ -1,0 +1,215 @@
+#!/usr/bin/env nu
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Palekiwi Labs
+
+# mem - CLI tool for managing AI agent artifacts in git repositories
+
+use commands/add.nu
+use commands/diff.nu
+use commands/init.nu
+use commands/list.nu
+use commands/prune.nu
+use commands/pull.nu
+use commands/push.nu
+use commands/ref.nu
+use commands/status.nu
+use errors.nu
+
+# Initialize agent artifacts directory structure
+def "main init" [] {
+    try {
+        init
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Create a new artifact file
+def "main add" [
+    filename: string       # Name of file to create
+    content?: string       # Content to write to file
+    --trace                # Save to trace/ directory
+    --tmp                  # Save to tmp/ directory
+    --ref                  # Save to ref/ directory
+    --commit: string       # Specify commit hash (requires --trace or --tmp)
+    --force(-f)            # Overwrite existing file
+] {
+    try {
+        add $filename $content --trace=$trace --tmp=$tmp --ref=$ref --commit=$commit --force=$force
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# List artifact files
+def "main list" [
+    --all(-a)              # List files for all branches
+    --depth: int = 0       # Limit depth (default: 0 = unlimited)
+    --json(-j)             # Output in JSON format
+] {
+    try {
+        list --all=$all --depth=$depth --json=$json
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Show git status of mem directory
+def "main status" [] {
+    try {
+        status
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Show git diff of changes in mem directory
+def "main diff" [
+    path?: string              # Optional path to specific file or directory
+] {
+    try {
+        diff $path
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Push mem branch to remote
+def "main push" [
+    --remote: string = "origin"  # Remote to push to
+] {
+    try {
+        push --remote=$remote
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Pull mem branch from remote
+def "main pull" [
+    --remote: string = "origin"  # Remote to pull from
+] {
+    try {
+        pull --remote=$remote
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Manage reference materials
+def "main ref" [] {
+    print "Usage: mem ref add <source>
+    
+Add reference materials to .agents/<branch>/ref/
+
+SOURCES:
+    github:<org>/<repo>           Clone GitHub repo (default branch)
+    github:<org>/<repo>/<branch>  Clone specific branch
+    github:<org>/<repo>@<commit>  Clone at specific commit
+    path:<filepath>               Copy local file or directory
+
+EXAMPLES:
+    mem ref add github:octocat/hello-world
+    mem ref add github:palekiwi/mem/develop
+    mem ref add github:org/repo@abc123d
+    mem ref add path:/etc/config.yaml
+    mem ref add path:~/Documents/api-docs/
+"
+}
+
+# Add a reference
+def "main ref add" [
+    source: string         # Source identifier (github:org/repo, path:/file/path)
+    --force(-f)            # Overwrite existing reference
+    --depth: int           # Shallow clone depth for git repositories
+] {
+    try {
+        ref add $source --force=$force --depth=$depth
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Delete temporary and reference files (cleanup)
+def "main prune" [
+    --all(-a)              # Delete for all branches
+    --force(-f)            # Skip confirmation
+] {
+    try {
+        prune --all=$all --force=$force
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Show version information
+def "main version" [] {
+    try {
+        open ($env.FILE_PWD | path join "VERSION") | str trim
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+def help [] {
+    print_help
+}
+
+def main [--version(-v)] {
+    try {
+        if $version {
+            open ($env.FILE_PWD | path join "VERSION") | str trim
+        } else {
+            print_help
+        }
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+def print_help [] {
+    print "mem - CLI tool for managing AI agent artifacts in git repositories
+
+USAGE:
+    mem <SUBCOMMAND> [OPTIONS]
+
+SUBCOMMANDS:
+    init       Initialize agent artifacts directory structure
+    add        Create a new artifact file
+    ref        Manage reference materials (clone repos, copy files)
+    list       List artifacts (respects .gitignore)
+    prune      Delete temporary and reference files (cleanup)
+    status     Show git status of mem directory
+    diff       Show git diff of changes in mem directory
+    push       Push mem branch to remote
+    pull       Pull mem branch from remote
+    version    Show version information
+    help       Show this help message
+
+OPTIONS:
+    -v, --version  Show version
+    -h, --help     Show this help
+
+EXAMPLES:
+    mem init                               # Initialize in current git repository
+    mem add spec.md                        # Create a file
+    mem add note.txt "content"           # Create a file with content
+    mem ref add github:octocat/hello-world # Clone GitHub repo
+    mem ref add path:~/config.yaml         # Copy local file
+    mem list                               # List files for current branch
+    mem list --all                         # List files for all branches
+    mem prune                              # Delete tmp/ and ref/ for current branch
+    mem prune --all                        # Delete for all branches (with confirmation)
+    mem prune --force                      # Skip confirmation prompt
+    mem prune -af                          # Delete for all branches, no confirmation
+    mem status                             # Show git status
+    mem diff                               # Show all changes in .mem/
+    mem diff spec.md                       # Show changes for specific file
+    mem diff trace/abc123d/                # Show changes for specific path
+    mem push                               # Push to origin/mem
+    mem push --remote upstream             # Push to upstream/mem
+    mem pull                               # Pull from origin/mem
+    mem pull --remote upstream             # Pull from upstream/mem
+    mem version                            # Show version
+"
+}
