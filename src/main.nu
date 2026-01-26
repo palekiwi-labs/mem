@@ -11,6 +11,7 @@ use commands/list.nu
 use commands/status.nu
 use commands/push.nu
 use commands/pull.nu
+use commands/ref.nu
 
 # Initialize agent artifacts directory structure
 def "main init" [] {
@@ -82,6 +83,40 @@ def "main pull" [
     }
 }
 
+# Manage reference materials
+def "main ref" [] {
+    print "Usage: mem ref add <source>
+    
+Add reference materials to .agents/<branch>/ref/
+
+SOURCES:
+    github:<org>/<repo>           Clone GitHub repo (default branch)
+    github:<org>/<repo>/<branch>  Clone specific branch
+    github:<org>/<repo>@<commit>  Clone at specific commit
+    path:<filepath>               Copy local file or directory
+
+EXAMPLES:
+    mem ref add github:octocat/hello-world
+    mem ref add github:palekiwi/mem/develop
+    mem ref add github:org/repo@abc123d
+    mem ref add path:/etc/config.yaml
+    mem ref add path:~/Documents/api-docs/
+"
+}
+
+# Add a reference
+def "main ref add" [
+    source: string         # Source identifier (github:org/repo, path:/file/path)
+    --force(-f)            # Overwrite existing reference
+    --depth: int           # Shallow clone depth for git repositories
+] {
+    try {
+        ref add $source --force=$force --depth=$depth
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
 # Show version information
 def "main version" [] {
     try {
@@ -116,6 +151,7 @@ USAGE:
 SUBCOMMANDS:
     init       Initialize agent artifacts directory structure
     add        Create a new artifact file
+    ref        Manage reference materials (clone repos, copy files)
     list       List artifacts (respects .gitignore)
     status     Show git status of mem directory
     push       Push mem branch to remote
@@ -128,16 +164,18 @@ OPTIONS:
     -h, --help     Show this help
 
 EXAMPLES:
-    mem init                      # Initialize in current git repository
-    mem add spec.md               # Create a file
-    mem add note.txt \"content\"    # Create a file with content
-    mem list                      # List files for current branch
-    mem list --all                # List files for all branches
-    mem status                    # Show git status
-    mem push                      # Push to origin/mem
-    mem push --remote upstream    # Push to upstream/mem
-    mem pull                      # Pull from origin/mem
-    mem pull --remote upstream    # Pull from upstream/mem
-    mem version                   # Show version
+    mem init                               # Initialize in current git repository
+    mem add spec.md                        # Create a file
+    mem add note.txt \"content\"           # Create a file with content
+    mem ref add github:octocat/hello-world # Clone GitHub repo
+    mem ref add path:~/config.yaml         # Copy local file
+    mem list                               # List files for current branch
+    mem list --all                         # List files for all branches
+    mem status                             # Show git status
+    mem push                               # Push to origin/mem
+    mem push --remote upstream             # Push to upstream/mem
+    mem pull                               # Pull from origin/mem
+    mem pull --remote upstream             # Pull from upstream/mem
+    mem version                            # Show version
 "
 }

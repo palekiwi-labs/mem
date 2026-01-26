@@ -55,5 +55,5 @@ export def main [
         $content | save --force $target_path
     }
     
-    print $"Created: ($relative_path)"
+    print $relative_path
 }
