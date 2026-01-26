@@ -107,3 +107,57 @@ export def check-environment [] {
 export def get-mem-dir-name [] {
     $MEM_DIR_NAME
 }
+
+# Check if remote exists
+export def remote-exists [remote: string = "origin"] {
+    (do { git remote get-url $remote } | complete).exit_code == 0
+}
+
+# Check if there are uncommitted changes in mem worktree
+export def has-uncommitted-changes [] {
+    let git_root = get-git-root
+    let mem_path = ($git_root | path join $MEM_DIR_NAME)
+    
+    cd $mem_path
+    let status = (git status --porcelain | str trim)
+    not ($status | is-empty)
+}
+
+# Check if local branch is ahead of remote
+export def is-ahead-of-remote [remote: string = "origin"] {
+    let result = (do { 
+        git rev-list --count $"($remote)/($MEM_BRANCH_NAME)..($MEM_BRANCH_NAME)" 
+    } | complete)
+    
+    if $result.exit_code != 0 {
+        return null
+    }
+    
+    ($result.stdout | str trim | into int) > 0
+}
+
+# Check if local branch is behind remote
+export def is-behind-remote [remote: string = "origin"] {
+    let result = (do { 
+        git rev-list --count $"($MEM_BRANCH_NAME)..($remote)/($MEM_BRANCH_NAME)" 
+    } | complete)
+    
+    if $result.exit_code != 0 {
+        return null
+    }
+    
+    ($result.stdout | str trim | into int) > 0
+}
+
+# Get commit count ahead of remote
+export def get-commits-ahead [remote: string = "origin"] {
+    let result = (do { 
+        git rev-list --count $"($remote)/($MEM_BRANCH_NAME)..($MEM_BRANCH_NAME)" 
+    } | complete)
+    
+    if $result.exit_code == 0 {
+        $result.stdout | str trim | into int
+    } else {
+        0
+    }
+}
