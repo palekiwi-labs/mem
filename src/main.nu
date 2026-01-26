@@ -108,9 +108,10 @@ EXAMPLES:
 def "main ref add" [
     source: string         # Source identifier (github:org/repo, path:/file/path)
     --force(-f)            # Overwrite existing reference
+    --depth: int           # Shallow clone depth for git repositories
 ] {
     try {
-        ref add $source --force=$force
+        ref add $source --force=$force --depth=$depth
     } catch { |err|
         errors pretty-print $err
     }

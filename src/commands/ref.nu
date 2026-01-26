@@ -9,6 +9,7 @@ use ../lib/git_utils.nu
 export def add [
     source: string         # Source identifier (github:org/repo, path:/file/path)
     --force(-f)            # Overwrite existing reference
+    --depth: int           # Shallow clone depth for git repositories
 ] {
     # 1. Environment Checks
     let branch = (git_utils check-environment)
@@ -30,7 +31,7 @@ export def add [
     
     # 4. Handle different source types
     if $source_type == "github" {
-        handle-github $source_location $ref_dir $git_root $force
+        handle-github $source_location $ref_dir $git_root $force $depth
     } else if $source_type == "path" {
         handle-path $source_location $ref_dir $git_root $force
     } else {
@@ -44,6 +45,7 @@ def handle-github [
     ref_dir: string        # Base ref directory
     git_root: string       # Git root for relative paths
     force: bool            # Overwrite existing reference
+    depth?: int            # Shallow clone depth (optional)
 ] {
     # Parse location (org/repo, org/repo/branch, org/repo@commit)
     let has_commit = ($location | str contains "@")
@@ -95,10 +97,17 @@ def handle-github [
     
     let clone_url = $"https://github.com/($parts.repo_path).git"
     
-    if "branch" in $parts {
-        run-external "git" "clone" "-b" $parts.branch $clone_url $target_path
+    # Build clone command with optional depth
+    let depth_args = if ($depth | describe) == "nothing" {
+        []
     } else {
-        run-external "git" "clone" $clone_url $target_path
+        ["--depth" ($depth | into string)]
+    }
+    
+    if "branch" in $parts {
+        run-external "git" "clone" ...$depth_args "-b" $parts.branch $clone_url $target_path
+    } else {
+        run-external "git" "clone" ...$depth_args $clone_url $target_path
         if "commit" in $parts {
             cd $target_path
             run-external "git" "checkout" $parts.commit
