@@ -5,6 +5,7 @@
 # mem - CLI tool for managing AI agent artifacts in git repositories
 
 use commands/add.nu
+use commands/diff.nu
 use commands/init.nu
 use commands/list.nu
 use commands/prune.nu
@@ -57,6 +58,17 @@ def "main list" [
 def "main status" [] {
     try {
         status
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Show git diff of changes in mem directory
+def "main diff" [
+    path?: string              # Optional path to specific file or directory
+] {
+    try {
+        diff $path
     } catch { |err|
         errors pretty-print $err
     }
@@ -168,6 +180,7 @@ SUBCOMMANDS:
     list       List artifacts (respects .gitignore)
     prune      Delete temporary and reference files (cleanup)
     status     Show git status of mem directory
+    diff       Show git diff of changes in mem directory
     push       Push mem branch to remote
     pull       Pull mem branch from remote
     version    Show version information
@@ -180,7 +193,7 @@ OPTIONS:
 EXAMPLES:
     mem init                               # Initialize in current git repository
     mem add spec.md                        # Create a file
-    mem add note.txt \"content\"           # Create a file with content
+    mem add note.txt "content"           # Create a file with content
     mem ref add github:octocat/hello-world # Clone GitHub repo
     mem ref add path:~/config.yaml         # Copy local file
     mem list                               # List files for current branch
@@ -190,6 +203,9 @@ EXAMPLES:
     mem prune --force                      # Skip confirmation prompt
     mem prune -af                          # Delete for all branches, no confirmation
     mem status                             # Show git status
+    mem diff                               # Show all changes in .mem/
+    mem diff spec.md                       # Show changes for specific file
+    mem diff trace/abc123d/                # Show changes for specific path
     mem push                               # Push to origin/mem
     mem push --remote upstream             # Push to upstream/mem
     mem pull                               # Pull from origin/mem
