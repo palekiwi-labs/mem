@@ -8,6 +8,9 @@ use errors.nu
 use commands/init.nu
 use commands/add.nu
 use commands/list.nu
+use commands/status.nu
+use commands/push.nu
+use commands/pull.nu
 
 # Initialize agent artifacts directory structure
 def "main init" [] {
@@ -48,6 +51,37 @@ def "main list" [
     }
 }
 
+# Show git status of mem directory
+def "main status" [] {
+    try {
+        status
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Push mem branch to remote
+def "main push" [
+    --remote: string = "origin"  # Remote to push to
+] {
+    try {
+        push --remote=$remote
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Pull mem branch from remote
+def "main pull" [
+    --remote: string = "origin"  # Remote to pull from
+] {
+    try {
+        pull --remote=$remote
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
 # Show version information
 def "main version" [] {
     try {
@@ -83,6 +117,9 @@ SUBCOMMANDS:
     init       Initialize agent artifacts directory structure
     add        Create a new artifact file
     list       List artifacts (respects .gitignore)
+    status     Show git status of mem directory
+    push       Push mem branch to remote
+    pull       Pull mem branch from remote
     version    Show version information
     help       Show this help message
 
@@ -91,14 +128,16 @@ OPTIONS:
     -h, --help     Show this help
 
 EXAMPLES:
-    mem init              # Initialize in current git repository
-    mem add spec.md       # Create a file
-    mem add note.txt \"content\" # Create a file with content
-    mem list              # List files for current branch
-    mem list --all        # List files for all branches
-    mem list --json       # List with metadata in JSON format
-    mem list --depth=2    # Limit directory depth
-    mem version           # Show version
-    mem help              # Show help
+    mem init                      # Initialize in current git repository
+    mem add spec.md               # Create a file
+    mem add note.txt \"content\"    # Create a file with content
+    mem list                      # List files for current branch
+    mem list --all                # List files for all branches
+    mem status                    # Show git status
+    mem push                      # Push to origin/mem
+    mem push --remote upstream    # Push to upstream/mem
+    mem pull                      # Pull from origin/mem
+    mem pull --remote upstream    # Pull from upstream/mem
+    mem version                   # Show version
 "
 }
