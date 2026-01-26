@@ -8,6 +8,7 @@ use ../lib/git_utils.nu
 # Add a reference by cloning a git repository or copying a file/directory
 export def add [
     source: string         # Source identifier (github:org/repo, path:/file/path)
+    --force(-f)            # Overwrite existing reference
 ] {
     # 1. Environment Checks
     let branch = (git_utils check-environment)
@@ -29,9 +30,9 @@ export def add [
     
     # 4. Handle different source types
     if $source_type == "github" {
-        handle-github $source_location $ref_dir $git_root
+        handle-github $source_location $ref_dir $git_root $force
     } else if $source_type == "path" {
-        handle-path $source_location $ref_dir $git_root
+        handle-path $source_location $ref_dir $git_root $force
     } else {
         error make {msg: $"Unsupported source type: ($source_type). Use 'github:' or 'path:'"}
     }
@@ -42,6 +43,7 @@ def handle-github [
     location: string       # org/repo or org/repo/branch or org/repo@commit
     ref_dir: string        # Base ref directory
     git_root: string       # Git root for relative paths
+    force: bool            # Overwrite existing reference
 ] {
     # Parse location (org/repo, org/repo/branch, org/repo@commit)
     let has_commit = ($location | str contains "@")
@@ -78,7 +80,11 @@ def handle-github [
     
     # Check if already exists
     if ($target_path | path exists) {
-        error make {msg: $"Reference already exists: ref/($target_name)/"}
+        if $force {
+            rm -rf $target_path
+        } else {
+            error make {msg: $"Reference already exists: ref/($target_name)/"}
+        }
     }
     
     # Create ref directory if needed
@@ -108,6 +114,7 @@ def handle-path [
     location: string       # File or directory path
     ref_dir: string        # Base ref directory
     git_root: string       # Git root for relative paths
+    force: bool            # Overwrite existing reference
 ] {
     # Get basename from original location (before expansion to avoid Nix store hashes)
     let target_name = ($location | path basename)
@@ -123,7 +130,11 @@ def handle-path [
     
     # Check if already exists
     if ($target_path | path exists) {
-        error make {msg: $"Reference already exists: ref/($target_name)"}
+        if $force {
+            rm -rf $target_path
+        } else {
+            error make {msg: $"Reference already exists: ref/($target_name)"}
+        }
     }
     
     # Create ref directory if needed

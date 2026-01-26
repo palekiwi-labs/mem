@@ -28,11 +28,12 @@ def "main add" [
     content?: string       # Content to write to file
     --trace                # Save to trace/ directory
     --tmp                  # Save to tmp/ directory
+    --ref                  # Save to ref/ directory
     --commit: string       # Specify commit hash (requires --trace or --tmp)
     --force(-f)            # Overwrite existing file
 ] {
     try {
-        add $filename $content --trace=$trace --tmp=$tmp --commit=$commit --force=$force
+        add $filename $content --trace=$trace --tmp=$tmp --ref=$ref --commit=$commit --force=$force
     } catch { |err|
         errors pretty-print $err
     }
@@ -106,9 +107,10 @@ EXAMPLES:
 # Add a reference
 def "main ref add" [
     source: string         # Source identifier (github:org/repo, path:/file/path)
+    --force(-f)            # Overwrite existing reference
 ] {
     try {
-        ref add $source
+        ref add $source --force=$force
     } catch { |err|
         errors pretty-print $err
     }
