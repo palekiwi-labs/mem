@@ -26,6 +26,8 @@ nix run github:palekiwi-labs/mem
 
 ## Directory Structure
 
+This structure is automatically managed by the `mem` CLI. You do not need to create these directories manually.
+
 ```
 .agents/
 ├── .gitignore           # Ignores */tmp/ and */ref/
