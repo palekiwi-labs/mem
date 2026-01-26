@@ -4,14 +4,15 @@
 
 # mem - CLI tool for managing AI agent artifacts in git repositories
 
-use errors.nu
-use commands/init.nu
 use commands/add.nu
+use commands/init.nu
 use commands/list.nu
-use commands/status.nu
-use commands/push.nu
+use commands/prune.nu
 use commands/pull.nu
+use commands/push.nu
 use commands/ref.nu
+use commands/status.nu
+use errors.nu
 
 # Initialize agent artifacts directory structure
 def "main init" [] {
@@ -117,6 +118,18 @@ def "main ref add" [
     }
 }
 
+# Delete temporary and reference files (cleanup)
+def "main prune" [
+    --all(-a)              # Delete for all branches
+    --force(-f)            # Skip confirmation
+] {
+    try {
+        prune --all=$all --force=$force
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
 # Show version information
 def "main version" [] {
     try {
@@ -153,6 +166,7 @@ SUBCOMMANDS:
     add        Create a new artifact file
     ref        Manage reference materials (clone repos, copy files)
     list       List artifacts (respects .gitignore)
+    prune      Delete temporary and reference files (cleanup)
     status     Show git status of mem directory
     push       Push mem branch to remote
     pull       Pull mem branch from remote
@@ -171,6 +185,10 @@ EXAMPLES:
     mem ref add path:~/config.yaml         # Copy local file
     mem list                               # List files for current branch
     mem list --all                         # List files for all branches
+    mem prune                              # Delete tmp/ and ref/ for current branch
+    mem prune --all                        # Delete for all branches (with confirmation)
+    mem prune --force                      # Skip confirmation prompt
+    mem prune -af                          # Delete for all branches, no confirmation
     mem status                             # Show git status
     mem push                               # Push to origin/mem
     mem push --remote upstream             # Push to upstream/mem
