@@ -151,8 +151,13 @@ def "main version" [] {
     }
 }
 
-def help [] {
-    print_help
+# Show help message
+def "main help" [] {
+    try {
+        print_help
+    } catch { |err|
+        errors pretty-print $err
+    }
 }
 
 def main [--version(-v)] {
@@ -165,6 +170,12 @@ def main [--version(-v)] {
     } catch { |err|
         errors pretty-print $err
     }
+}
+
+# Override built-in help to show custom help for main script
+# This intercepts the --help flag before Nushell's auto-generated help
+def help [...rest] {
+    print_help
 }
 
 def print_help [] {
