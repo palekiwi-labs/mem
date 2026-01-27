@@ -4,11 +4,12 @@
 # Prune temporary and reference files
 
 use ../lib/git_utils.nu
+use ../lib/config load
 
 # Get list of all branch directories in .agents/
 def get-all-branch-dirs [] {
     let git_root = (git_utils get-git-root)
-    let mem_dir = ($git_root | path join (git_utils get-mem-dir-name))
+    let mem_dir = ($git_root | path join (load).dir_name)
     
     if not ($mem_dir | path exists) {
         return []

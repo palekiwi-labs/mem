@@ -4,6 +4,7 @@
 # Show git diff of changes in mem directory
 
 use ../lib/git_utils.nu
+use ../lib/config load
 
 export def main [
     path?: string              # Optional path to specific file or directory
@@ -13,7 +14,7 @@ export def main [
     
     # 2. Run git diff in mem worktree
     let git_root = (git_utils get-git-root)
-    let mem_path = ($git_root | path join (git_utils get-mem-dir-name))
+    let mem_path = ($git_root | path join (load).dir_name)
     
     cd $mem_path
     

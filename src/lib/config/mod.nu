@@ -3,5 +3,6 @@
 
 # Configuration module - main entry point
 
-export use defaults.nu [MEM_DIR_NAME, MEM_BRANCH_NAME]
+export use defaults.nu DEFAULTS
 export use loader.nu [load, get-with-sources, get-path, file-exists]
+export use display.nu [show, show-sources]
