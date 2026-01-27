@@ -205,7 +205,7 @@ OPTIONS:
 EXAMPLES:
     mem init                               # Initialize in current git repository
     mem add spec.md                        # Create a file
-    mem add note.txt \"content\"           # Create a file with content
+    mem add note.txt 'content'             # Create a file with content
     mem ref add github:octocat/hello-world # Clone GitHub repo
     mem ref add path:~/config.yaml         # Copy local file
     mem list                               # List files for current branch
