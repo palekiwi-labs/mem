@@ -5,6 +5,7 @@
 # mem - CLI tool for managing AI agent artifacts in git repositories
 
 use commands/add.nu
+use commands/config.nu
 use commands/diff.nu
 use commands/init.nu
 use commands/list.nu
@@ -101,7 +102,7 @@ def "main pull" [
 def "main ref" [] {
     print "Usage: mem ref add <source>
     
-Add reference materials to .agents/<branch>/ref/
+Add reference materials to .mem/<branch>/ref/
 
 SOURCES:
     github:<org>/<repo>           Clone GitHub repo (default branch)
@@ -138,6 +139,15 @@ def "main prune" [
 ] {
     try {
         prune --all=$all --force=$force
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# Show current configuration
+def "main config" [] {
+    try {
+        config
     } catch { |err|
         errors pretty-print $err
     }
@@ -195,12 +205,29 @@ SUBCOMMANDS:
     diff       Show git diff of changes in mem directory
     push       Push mem branch to remote
     pull       Pull mem branch from remote
+    config     Show current configuration and sources
     version    Show version information
     help       Show this help message
 
 OPTIONS:
     -v, --version  Show version
     -h, --help     Show this help
+
+CONFIGURATION:
+    mem can be customized via config file or environment variables:
+    
+    Config file: ~/.config/mem/mem.json
+    Example:
+        {
+          \"branch_name\": \"context\",
+          \"dir_name\": \".mem\"
+        }
+    
+    Environment variables (override config file):
+        MEM_BRANCH_NAME    Git branch name (default: \"mem\")
+        MEM_DIR_NAME       Directory name (default: ".mem")
+    
+    View current config: mem config
 
 EXAMPLES:
     mem init                               # Initialize in current git repository
@@ -224,6 +251,7 @@ EXAMPLES:
     mem push --remote upstream             # Push to upstream/mem
     mem pull                               # Pull from origin/mem
     mem pull --remote upstream             # Pull from upstream/mem
+    mem config                             # Show configuration
     mem version                            # Show version
 "
 }

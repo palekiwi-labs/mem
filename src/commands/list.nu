@@ -4,7 +4,7 @@
 # List artifact files
 
 use ../lib/git_utils.nu
-use ../config.nu [MEM_DIR_NAME]
+use ../config.nu [get-mem-dir-name]
 
 export def main [
     --all(-a)              # List files for all branches
@@ -202,10 +202,11 @@ def parse-artifact-path [
         }
     }
     
-    let full_path = ($git_root | path join $MEM_DIR_NAME $rel_path)
+    let mem_dir_name = (get-mem-dir-name)
+    let full_path = ($git_root | path join $mem_dir_name $rel_path)
     
     {
-        path: $"($MEM_DIR_NAME)/($rel_path)"
+        path: $"($mem_dir_name)/($rel_path)"
         name: ($rel_path | path basename)
         branch: $branch
         category: $category_info.category

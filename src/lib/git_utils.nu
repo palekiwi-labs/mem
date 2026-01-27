@@ -3,7 +3,7 @@
 
 # Git helper functions for mem
 
-use ../config.nu [MEM_DIR_NAME, MEM_BRANCH_NAME]
+use ../config.nu [get-mem-dir-name, get-mem-branch-name]
 
 export def is-git-repo [] {
     (do { git rev-parse --git-dir } | complete).exit_code == 0
@@ -15,37 +15,39 @@ export def get-git-root [] {
 
 export def mem-dir-exists [] {
     let git_root = get-git-root
-    let mem_path = ($git_root | path join $MEM_DIR_NAME)
+    let mem_path = ($git_root | path join (get-mem-dir-name))
     $mem_path | path exists
 }
 
 export def mem-branch-exists [] {
-    (do { git rev-parse --verify $MEM_BRANCH_NAME } | complete).exit_code == 0
+    (do { git rev-parse --verify (get-mem-branch-name) } | complete).exit_code == 0
 }
 
 export def mem-branch-exists-on-remote [remote: string = "origin"] {
-    (do { git ls-remote --heads $remote $MEM_BRANCH_NAME } | complete).stdout | str trim | is-not-empty
+    (do { git ls-remote --heads $remote (get-mem-branch-name) } | complete).stdout | str trim | is-not-empty
 }
 
 export def ensure-worktree [] {
     let git_root = get-git-root
-    let mem_path = ($git_root | path join $MEM_DIR_NAME)
+    let mem_dir_name = (get-mem-dir-name)
+    let mem_branch_name = (get-mem-branch-name)
+    let mem_path = ($git_root | path join $mem_dir_name)
     
     if ($mem_path | path exists) {
-        error make {msg: $"($MEM_DIR_NAME) directory already exists at ($mem_path)"}
+        error make {msg: $"($mem_dir_name) directory already exists at ($mem_path)"}
     }
     
     if (mem-branch-exists) {
         # Case 1: Local branch exists - attach it
-        git worktree add $mem_path $MEM_BRANCH_NAME
+        git worktree add $mem_path $mem_branch_name
     } else if (mem-branch-exists-on-remote) {
         # Case 2: Branch exists on remote but not locally - fetch and checkout
-        print $"Found ($MEM_BRANCH_NAME) branch on remote, fetching..."
-        git fetch origin $"($MEM_BRANCH_NAME):($MEM_BRANCH_NAME)"
-        git worktree add $mem_path $MEM_BRANCH_NAME
+        print $"Found ($mem_branch_name) branch on remote, fetching..."
+        git fetch origin $"($mem_branch_name):($mem_branch_name)"
+        git worktree add $mem_path $mem_branch_name
     } else {
         # Case 3: Branch doesn't exist anywhere - create new orphan branch
-        git worktree add --orphan -b $MEM_BRANCH_NAME $mem_path
+        git worktree add --orphan -b $mem_branch_name $mem_path
         
         # Change to worktree directory to create initial commit
         cd $mem_path
@@ -55,14 +57,14 @@ export def ensure-worktree [] {
         $gitignore_content | save --force .gitignore
         
         git add .gitignore
-        git commit -m $"Initialize ($MEM_BRANCH_NAME) branch"
+        git commit -m $"Initialize ($mem_branch_name) branch"
     }
 }
 
 # Check if worktree exists at agent artifacts directory
 export def worktree-exists [] {
     let git_root = get-git-root
-    let mem_path = ($git_root | path join $MEM_DIR_NAME)
+    let mem_path = ($git_root | path join (get-mem-dir-name))
     let worktrees = (git worktree list --porcelain | parse "{key} {value}")
     
     $worktrees | any {|w| $w.key == "worktree" and ($w.value | str trim) == $mem_path}
@@ -84,7 +86,7 @@ export def sanitize-branch-name [name: string] {
 export def get-mem-dir-for-branch [branch: string] {
     let git_root = get-git-root
     let sanitized = (sanitize-branch-name $branch)
-    $git_root | path join $MEM_DIR_NAME $sanitized
+    $git_root | path join (get-mem-dir-name) $sanitized
 }
 
 export def check-environment [] {
@@ -104,9 +106,7 @@ export def check-environment [] {
     $branch
 }
 
-export def get-mem-dir-name [] {
-    $MEM_DIR_NAME
-}
+
 
 # Check if remote exists
 export def remote-exists [remote: string = "origin"] {
@@ -116,7 +116,7 @@ export def remote-exists [remote: string = "origin"] {
 # Check if there are uncommitted changes in mem worktree
 export def has-uncommitted-changes [] {
     let git_root = get-git-root
-    let mem_path = ($git_root | path join $MEM_DIR_NAME)
+    let mem_path = ($git_root | path join (get-mem-dir-name))
     
     cd $mem_path
     let status = (git status --porcelain | str trim)
@@ -125,8 +125,9 @@ export def has-uncommitted-changes [] {
 
 # Check if local branch is ahead of remote
 export def is-ahead-of-remote [remote: string = "origin"] {
+    let mem_branch_name = (get-mem-branch-name)
     let result = (do { 
-        git rev-list --count $"($remote)/($MEM_BRANCH_NAME)..($MEM_BRANCH_NAME)" 
+        git rev-list --count $"($remote)/($mem_branch_name)..($mem_branch_name)" 
     } | complete)
     
     if $result.exit_code != 0 {
@@ -138,8 +139,9 @@ export def is-ahead-of-remote [remote: string = "origin"] {
 
 # Check if local branch is behind remote
 export def is-behind-remote [remote: string = "origin"] {
+    let mem_branch_name = (get-mem-branch-name)
     let result = (do { 
-        git rev-list --count $"($MEM_BRANCH_NAME)..($remote)/($MEM_BRANCH_NAME)" 
+        git rev-list --count $"($mem_branch_name)..($remote)/($mem_branch_name)" 
     } | complete)
     
     if $result.exit_code != 0 {
@@ -151,8 +153,9 @@ export def is-behind-remote [remote: string = "origin"] {
 
 # Get commit count ahead of remote
 export def get-commits-ahead [remote: string = "origin"] {
+    let mem_branch_name = (get-mem-branch-name)
     let result = (do { 
-        git rev-list --count $"($remote)/($MEM_BRANCH_NAME)..($MEM_BRANCH_NAME)" 
+        git rev-list --count $"($remote)/($mem_branch_name)..($mem_branch_name)" 
     } | complete)
     
     if $result.exit_code == 0 {
