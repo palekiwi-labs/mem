@@ -208,20 +208,34 @@ export def get-commit-info-batch [hashes: list] {
         return []
     }
     
-    let result = (git log --all --format='%h|%ct' | complete)
+    # Use git cat-file --batch-check for efficient targeted commit lookups
+    # This only queries the specific commits we need instead of scanning all history
+    let batch_input = ($hashes | str join "\n")
     
-    if $result.exit_code != 0 {
+    let cat_result = ($batch_input | git cat-file --batch-check | complete)
+    
+    if $cat_result.exit_code != 0 {
         return []
     }
     
-    $result.stdout 
-    | lines 
-    | split column '|' hash timestamp
-    | where hash in $hashes
+    # Parse output: <full-hash> <type> <size>
+    # Filter to only valid commits and get their timestamps
+    $cat_result.stdout
+    | lines
+    | parse "{full_hash} {type} {size}"
+    | where type == "commit"
     | each {|row|
+        # Get short hash and timestamp
+        let short_hash = ($row.full_hash | str substring 0..6)
+        let ts_result = (git log -1 --format='%ct' $row.full_hash | complete)
+        let timestamp = if $ts_result.exit_code == 0 {
+            $ts_result.stdout | str trim | into int
+        } else {
+            0
+        }
         {
-            hash: $row.hash,
-            timestamp: ($row.timestamp | into int)
+            hash: $short_hash,
+            timestamp: $timestamp
         }
     }
 }
