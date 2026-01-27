@@ -46,9 +46,10 @@ def "main list" [
     --all(-a)              # List files for all branches
     --depth: int = 0       # Limit depth (default: 0 = unlimited)
     --json(-j)             # Output in JSON format
+    --include-ignored(-i)  # Include gitignored tmp/ and ref/ files
 ] {
     try {
-        list --all=$all --depth=$depth --json=$json
+        list --all=$all --depth=$depth --json=$json --include-ignored=$include_ignored
     } catch { |err|
         errors pretty-print $err
     }
@@ -209,6 +210,8 @@ EXAMPLES:
     mem ref add path:~/config.yaml         # Copy local file
     mem list                               # List files for current branch
     mem list --all                         # List files for all branches
+    mem list --include-ignored             # Include tmp/ and ref/ files
+    mem list -ai --json                    # All branches, with ignored files, JSON output
     mem prune                              # Delete tmp/ and ref/ for current branch
     mem prune --all                        # Delete for all branches (with confirmation)
     mem prune --force                      # Skip confirmation prompt

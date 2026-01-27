@@ -77,20 +77,23 @@ def handle-github [
     
     let org = ($repo_parts | first)
     let repo = ($repo_parts | last)
-    let target_name = $"($org)-($repo)"
-    let target_path = ($ref_dir | path join $target_name)
+    
+    # Build nested path: ref/repos/<org>/<repo>/
+    let repos_dir = ($ref_dir | path join "repos")
+    let org_dir = ($repos_dir | path join $org)
+    let target_path = ($org_dir | path join $repo)
     
     # Check if already exists
     if ($target_path | path exists) {
         if $force {
             rm -rf $target_path
         } else {
-            error make {msg: $"Reference already exists: ref/($target_name)/"}
+            error make {msg: $"Reference already exists: ref/repos/($org)/($repo)/"}
         }
     }
     
-    # Create ref directory if needed
-    mkdir $ref_dir
+    # Create repos/<org> directory if needed
+    mkdir $org_dir
     
     # Clone repository
     print $"Cloning github:($location)..."
