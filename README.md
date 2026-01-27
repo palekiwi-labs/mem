@@ -36,18 +36,21 @@ This structure is automatically managed by the `mem` CLI. You do not need to cre
 │   ├── trace/           # Commit-tied logs
 │   │   └── <commit>/    # Specific commit hash
 │   │       └── log.txt
-│   ├── tmp/             # Temporary content
+│   ├── tmp/             # Temporary content (git-ignored)
 │   │   └── <commit>/
 │   │       └── cache.json
-│   └── ref/             # Reference materials
-│       └── hello-world/ # Cloned repos or copied files
+│   └── ref/             # Reference materials (git-ignored)
+│       ├── config.yaml  # Individual reference files
+│       └── repos/       # Cloned git repositories (excluded from listings)
+│           └── hello-world/
 ```
 
 **Tracked vs Untracked Content:**
 - **Root files** (e.g., `.agents/dev/plan.md`): **Git-tracked** long-lived context that persists across commits.
 - **Trace files** (e.g., `.agents/dev/trace/abc123/analysis.md`): **Git-tracked** logs and analysis tied to specific commits (e.g., AI analysis of a failure).
 - **Tmp files** (e.g., `.agents/dev/tmp/abc123/error.log`): **Git-ignored** throw-away artifacts (e.g., raw CI logs, error logs) corresponding to a specific commit state.
-- **Ref files** (e.g., `.agents/dev/ref/external-repo/`): **Git-ignored** reference material (cloned repos, external docs) that provides context not inferable from the repo itself.
+- **Ref files** (e.g., `.agents/dev/ref/config.yaml`): **Git-ignored** reference material that provides context not inferable from the repo itself.
+- **Ref repos** (e.g., `.agents/dev/ref/repos/hello-world/`): **Git-ignored** cloned git repositories (always excluded from `list` output even with `--include-ignored`).
 
 ## Usage
 
@@ -127,12 +130,42 @@ mem list
 # List files for all branches
 mem list --all
 
+# Include gitignored tmp/ and ref/ files (excludes cloned repos in ref/repos/)
+mem list --include-ignored
+
 # List files with depth limit
 mem list --depth 2
 
-# Output in JSON format
+# Output in JSON format with commit metadata
 mem list --json
+
+# All branches, with ignored files, JSON output
+mem list --all --include-ignored --json
 ```
+
+**JSON Output Format:**
+```json
+[
+  {
+    "path": ".agents/dev/plan.md",
+    "name": "plan.md",
+    "branch": "dev",
+    "category": "root",
+    "hash": null,
+    "commit_hash": "a11f8b2",
+    "commit_timestamp": 1769499452
+  }
+]
+```
+
+**Field Descriptions:**
+- `path`: Full relative path from repository root
+- `name`: Filename
+- `branch`: Branch name
+- `category`: File category (root, trace, tmp, ref)
+- `hash`: Commit hash if file is in trace/tmp/ subdirectory (null for root/ref)
+- `commit_hash`: Git commit hash (branch HEAD for root/ref files, explicit commit for trace/tmp)
+- `commit_timestamp`: Unix timestamp of the commit (useful for sorting chronologically)
 
 ### Cleanup
 
