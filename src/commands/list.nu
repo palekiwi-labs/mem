@@ -77,7 +77,7 @@ export def main [
     let enriched = (enrich-with-commit-data $depth_filtered $branches_to_query)
     
     # 8. Output
-    let output = ($enriched | select path name branch category hash commit_hash commit_timestamp depth)
+    let output = ($enriched | select path name branch category hash commit_hash commit_timestamp)
     
     if $json {
         $output | to json
