@@ -42,7 +42,8 @@ This structure is automatically managed by the `mem` CLI. You do not need to cre
 │   └── ref/             # Reference materials (git-ignored)
 │       ├── config.yaml  # Individual reference files
 │       └── repos/       # Cloned git repositories (excluded from listings)
-│           └── hello-world/
+│           └── octocat/
+│               └── hello-world/
 ```
 
 **Tracked vs Untracked Content:**
@@ -50,7 +51,7 @@ This structure is automatically managed by the `mem` CLI. You do not need to cre
 - **Trace files** (e.g., `.agents/dev/trace/abc123/analysis.md`): **Git-tracked** logs and analysis tied to specific commits (e.g., AI analysis of a failure).
 - **Tmp files** (e.g., `.agents/dev/tmp/abc123/error.log`): **Git-ignored** throw-away artifacts (e.g., raw CI logs, error logs) corresponding to a specific commit state.
 - **Ref files** (e.g., `.agents/dev/ref/config.yaml`): **Git-ignored** reference material that provides context not inferable from the repo itself.
-- **Ref repos** (e.g., `.agents/dev/ref/repos/hello-world/`): **Git-ignored** cloned git repositories (always excluded from `list` output even with `--include-ignored`).
+- **Ref repos** (e.g., `.agents/dev/ref/repos/octocat/hello-world/`): **Git-ignored** cloned git repositories (always excluded from `list` output even with `--include-ignored`).
 
 ## Usage
 
