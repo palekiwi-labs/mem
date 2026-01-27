@@ -4,13 +4,16 @@
 # Pull mem branch from remote
 
 use ../lib/git_utils.nu
-use ../config.nu [MEM_BRANCH_NAME, MEM_DIR_NAME]
+use ../config.nu [get-mem-branch-name, get-mem-dir-name]
 
 export def main [
     --remote: string = "origin"  # Remote to pull from (default: origin)
 ] {
     # 1. Environment Checks
     git_utils check-environment
+    
+    let mem_branch_name = (get-mem-branch-name)
+    let mem_dir_name = (get-mem-dir-name)
     
     # 2. Verify remote exists
     if not (git_utils remote-exists $remote) {
@@ -43,12 +46,12 @@ export def main [
     
     # 4. Fetch to check if there are updates
     let git_root = (git_utils get-git-root)
-    let mem_path = ($git_root | path join $MEM_DIR_NAME)
+    let mem_path = ($git_root | path join $mem_dir_name)
     
     cd $mem_path
     
-    print $"Fetching from ($remote)/($MEM_BRANCH_NAME)..."
-    let fetch_result = (do { git fetch $remote $MEM_BRANCH_NAME } | complete)
+    print $"Fetching from ($remote)/($mem_branch_name)..."
+    let fetch_result = (do { git fetch $remote $mem_branch_name } | complete)
     
     if $fetch_result.exit_code != 0 {
         error make {
@@ -59,20 +62,20 @@ export def main [
     
     # 5. Check if behind
     if not (git_utils is-behind-remote $remote) {
-        print $"✓ Already up to date with ($remote)/($MEM_BRANCH_NAME)"
+        print $"✓ Already up to date with ($remote)/($mem_branch_name)"
         return
     }
     
     # 6. Pull changes
-    print $"Pulling from ($remote)/($MEM_BRANCH_NAME)..."
-    let pull_result = (do { git pull $remote $MEM_BRANCH_NAME } | complete)
+    print $"Pulling from ($remote)/($mem_branch_name)..."
+    let pull_result = (do { git pull $remote $mem_branch_name } | complete)
     
     if $pull_result.exit_code != 0 {
         error make {
             msg: $"Failed to pull from ($remote)"
-            help: $"($pull_result.stderr)\n\nYou may have merge conflicts. Resolve them in ($MEM_DIR_NAME)/ and commit."
+            help: $"($pull_result.stderr)\n\nYou may have merge conflicts. Resolve them in ($mem_dir_name)/ and commit."
         }
     }
     
-    print $"✓ Successfully pulled from ($remote)/($MEM_BRANCH_NAME)"
+    print $"✓ Successfully pulled from ($remote)/($mem_branch_name)"
 }

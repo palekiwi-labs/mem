@@ -24,12 +24,53 @@ mem provides a structured way to store and manage context, documentation, and ar
 nix run github:palekiwi-labs/mem
 ```
 
+## Configuration
+
+mem can be customized through configuration files or environment variables.
+
+### Configuration File
+
+Create a JSON file at `~/.config/mem/mem.json`:
+
+Example `mem.json`:
+```json
+{
+  "branch_name": "context",
+  "dir_name": ".mem"
+}
+```
+
+### Environment Variables
+
+Environment variables override config file values:
+- `MEM_BRANCH_NAME` - Git branch name (default: "mem")
+- `MEM_DIR_NAME` - Directory name (default: ".mem")
+
+Example:
+```bash
+export MEM_BRANCH_NAME=ai-context
+export MEM_DIR_NAME=.context
+mem init
+```
+
+### Configuration Priority
+
+1. Environment variables (highest)
+2. Config file
+3. Hardcoded defaults (lowest)
+
+### Viewing Configuration
+
+```bash
+mem config
+```
+
 ## Directory Structure
 
 This structure is automatically managed by the `mem` CLI. You do not need to create these directories manually.
 
 ```
-.agents/
+.mem/
 ├── .gitignore           # Ignores */tmp/ and */ref/
 ├── <branch-name>/       # Per-branch directories
 │   ├── plan.md          # Root-level context
@@ -47,11 +88,11 @@ This structure is automatically managed by the `mem` CLI. You do not need to cre
 ```
 
 **Tracked vs Untracked Content:**
-- **Root files** (e.g., `.agents/dev/plan.md`): **Git-tracked** long-lived context that persists across commits.
-- **Trace files** (e.g., `.agents/dev/trace/abc123/analysis.md`): **Git-tracked** logs and analysis tied to specific commits (e.g., AI analysis of a failure).
-- **Tmp files** (e.g., `.agents/dev/tmp/abc123/error.log`): **Git-ignored** throw-away artifacts (e.g., raw CI logs, error logs) corresponding to a specific commit state.
-- **Ref files** (e.g., `.agents/dev/ref/config.yaml`): **Git-ignored** reference material that provides context not inferable from the repo itself.
-- **Ref repos** (e.g., `.agents/dev/ref/repos/octocat/hello-world/`): **Git-ignored** cloned git repositories (always excluded from `list` output even with `--include-ignored`).
+- **Root files** (e.g., `.mem/dev/plan.md`): **Git-tracked** long-lived context that persists across commits.
+- **Trace files** (e.g., `.mem/dev/trace/abc123/analysis.md`): **Git-tracked** logs and analysis tied to specific commits (e.g., AI analysis of a failure).
+- **Tmp files** (e.g., `.mem/dev/tmp/abc123/error.log`): **Git-ignored** throw-away artifacts (e.g., raw CI logs, error logs) corresponding to a specific commit state.
+- **Ref files** (e.g., `.mem/dev/ref/config.yaml`): **Git-ignored** reference material that provides context not inferable from the repo itself.
+- **Ref repos** (e.g., `.mem/dev/ref/repos/octocat/hello-world/`): **Git-ignored** cloned git repositories (always excluded from `list` output even with `--include-ignored`).
 
 ## Usage
 
@@ -64,7 +105,7 @@ mem init
 ```
 
 This creates:
-- `.agents/` directory as a git worktree
+- `.mem/` directory as a git worktree
 - `mem` orphan branch
 - Initial `.gitignore` in the worktree
 
@@ -148,7 +189,7 @@ mem list --all --include-ignored --json
 ```json
 [
   {
-    "path": ".agents/dev/plan.md",
+    "path": ".mem/dev/plan.md",
     "name": "plan.md",
     "branch": "dev",
     "category": "root",
@@ -220,6 +261,13 @@ mem pull
 mem pull --remote upstream
 ```
 
+### Configuration
+
+```bash
+# Show current configuration and sources
+mem config
+```
+
 ### Version
 
 ```bash
@@ -232,7 +280,7 @@ mem version
 mem uses git worktrees to create an isolated environment for storing shared context and artifacts:
 
 1. **Orphan Branch**: Creates a `mem` branch with no history
-2. **Worktree Mount**: Mounts the orphan branch at `.agents/`
+2. **Worktree Mount**: Mounts the orphan branch at `.mem/`
 3. **Branch Isolation**: Context is organized by git branch
 4. **Git Tracking**: All files are tracked via git, respecting .gitignore
 5. **Remote Sync**: Push/pull operations sync the mem branch
