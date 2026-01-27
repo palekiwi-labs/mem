@@ -4,7 +4,7 @@
 # Push mem branch to remote
 
 use ../lib/git_utils.nu
-use ../config.nu [get-mem-branch-name, get-mem-dir-name]
+use ../lib/config load
 
 export def main [
     --remote: string = "origin"  # Remote to push to (default: origin)
@@ -12,8 +12,9 @@ export def main [
     # 1. Environment Checks
     git_utils check-environment
     
-    let mem_branch_name = (get-mem-branch-name)
-    let mem_dir_name = (get-mem-dir-name)
+    let config = (load)
+    let mem_branch_name = $config.branch_name
+    let mem_dir_name = $config.dir_name
     
     # 2. Verify remote exists
     if not (git_utils remote-exists $remote) {

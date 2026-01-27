@@ -3,7 +3,7 @@
 
 # Initialize agent artifacts directory structure
 
-use ../config.nu [get-mem-dir-name, get-mem-branch-name]
+use ../lib/config load
 use ../lib/git_utils.nu
 
 # Initialize the agent artifacts directory with orphan branch and worktree
@@ -13,8 +13,9 @@ export def main [] {
         error make {msg: "Not in a git repository"}
     }
     
-    let mem_dir_name = (get-mem-dir-name)
-    let mem_branch_name = (get-mem-branch-name)
+    let config = (load)
+    let mem_dir_name = $config.dir_name
+    let mem_branch_name = $config.branch_name
     
     # 2. Check if agent artifacts directory already exists
     if (git_utils mem-dir-exists) {

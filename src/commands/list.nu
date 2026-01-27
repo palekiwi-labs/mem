@@ -4,7 +4,7 @@
 # List artifact files
 
 use ../lib/git_utils.nu
-use ../config.nu [get-mem-dir-name]
+use ../lib/config load
 
 export def main [
     --all(-a)              # List files for all branches
@@ -13,12 +13,13 @@ export def main [
     --include-ignored(-i)  # Include gitignored tmp/ and ref/ files
 ] {
     # 1. Environment Checks
-    let current_branch = (git_utils check-environment)
+    let current_branch = git_utils check-environment
+    let config = load
     
     # 2. Path Setup
-    let git_root = (git_utils get-git-root)
-    let mem_dir = ($git_root | path join (git_utils get-mem-dir-name))
-    
+    let git_root = git_utils get-git-root
+    let mem_dir = $git_root | path join $config.dir_name
+
     if not ($mem_dir | path exists) {
         return
     }
@@ -26,8 +27,8 @@ export def main [
     # 3. Get files from git
     cd $mem_dir
     
-    let tracked = (git ls-files | lines)
-    let untracked = (git ls-files --others --exclude-standard | lines)
+    let tracked = git ls-files | lines
+    let untracked = git ls-files --others --exclude-standard | lines
     
     # Optionally include gitignored files
     let ignored = if $include_ignored {
@@ -36,7 +37,7 @@ export def main [
         []
     }
     
-    let all_paths = ($tracked | append $untracked | append $ignored | uniq)
+    let all_paths = $tracked | append $untracked | append $ignored | uniq
     
     if ($all_paths | is-empty) {
         return
@@ -74,10 +75,10 @@ export def main [
         [$current_branch]
     }
     
-    let enriched = (enrich-with-commit-data $depth_filtered $branches_to_query)
+    let enriched = enrich-with-commit-data $depth_filtered $branches_to_query
     
     # 8. Output
-    let output = ($enriched | select path name branch category hash commit_hash commit_timestamp)
+    let output = $enriched | select path name branch category hash commit_hash commit_timestamp
     
     if $json {
         $output | to json
@@ -172,14 +173,14 @@ def parse-artifact-path [
     rel_path: string
     git_root: string
 ] {
-    let parts = ($rel_path | path split)
+    let parts = $rel_path | path split
     
     if ($parts | length) < 2 {
         return null
     }
     
-    let branch = ($parts | first)
-    let rest = ($parts | skip 1)
+    let branch = $parts | first
+    let rest = $parts | skip 1
     
     # Determine category and hash
     let category_info = if ($rest | length) == 1 {
@@ -202,7 +203,7 @@ def parse-artifact-path [
         }
     }
     
-    let mem_dir_name = (get-mem-dir-name)
+    let mem_dir_name = (load).dir_name
     let full_path = ($git_root | path join $mem_dir_name $rel_path)
     
     {

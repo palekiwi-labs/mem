@@ -145,9 +145,9 @@ def "main prune" [
 }
 
 # Show current configuration
-def "main config" [] {
+def "main config" [--json] {
     try {
-        config
+        config --json=$json
     } catch { |err|
         errors pretty-print $err
     }
