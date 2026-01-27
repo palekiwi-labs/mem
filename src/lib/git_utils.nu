@@ -161,3 +161,67 @@ export def get-commits-ahead [remote: string = "origin"] {
         0
     }
 }
+
+# Get HEAD commit info for a branch (from main repo context)
+export def get-branch-head-info [branch: string] {
+    # Try local branch first
+    let local_result = (git log -1 --format='%h|%ct' $branch | complete)
+    
+    if $local_result.exit_code == 0 {
+        let parts = ($local_result.stdout | str trim | split column '|' hash timestamp)
+        if ($parts | length) > 0 {
+            let row = ($parts | first)
+            return {
+                branch: $branch, 
+                hash: $row.hash, 
+                timestamp: ($row.timestamp | into int)
+            }
+        }
+    }
+    
+    # Try origin/{branch} if local doesn't exist
+    let remote_result = (git log -1 --format='%h|%ct' $"origin/($branch)" | complete)
+    
+    if $remote_result.exit_code == 0 {
+        let parts = ($remote_result.stdout | str trim | split column '|' hash timestamp)
+        if ($parts | length) > 0 {
+            let row = ($parts | first)
+            return {
+                branch: $branch,
+                hash: $row.hash,
+                timestamp: ($row.timestamp | into int)
+            }
+        }
+    }
+    
+    # Branch not found
+    {
+        branch: $branch,
+        hash: null,
+        timestamp: 0
+    }
+}
+
+# Batch query for commit info (from main repo context)
+export def get-commit-info-batch [hashes: list] {
+    if ($hashes | is-empty) {
+        return []
+    }
+    
+    let result = (git log --all --format='%h|%ct' | complete)
+    
+    if $result.exit_code != 0 {
+        return []
+    }
+    
+    $result.stdout 
+    | lines 
+    | split column '|' hash timestamp
+    | where hash in $hashes
+    | each {|row|
+        {
+            hash: $row.hash,
+            timestamp: ($row.timestamp | into int)
+        }
+    }
+}
