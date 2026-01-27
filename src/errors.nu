@@ -2,6 +2,11 @@
 # Copyright (c) 2026 Palekiwi Labs
 
 export def pretty-print [error: record] {
+    if "MEM_DEBUG" in $env and ($env.MEM_DEBUG == "1") {
+        print $error.rendered
+        exit 1
+    }
+
     let error_data = $error.json | from json
 
     let msg = $error_data.msg
