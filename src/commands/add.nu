@@ -28,10 +28,22 @@ export def main [
     
     let target_dir = if $trace {
         let hash = if ($commit != null) { $commit } else { git_utils get-current-commit-short }
-        $base_dir | path join "trace" $hash
+        let timestamp = if ($commit != null) {
+            git_utils get-commit-timestamp $commit
+        } else {
+            git_utils get-current-commit-timestamp
+        }
+        let dir_name = $"($timestamp)-($hash)"
+        $base_dir | path join "trace" $dir_name
     } else if $tmp {
         let hash = if ($commit != null) { $commit } else { git_utils get-current-commit-short }
-        $base_dir | path join "tmp" $hash
+        let timestamp = if ($commit != null) {
+            git_utils get-commit-timestamp $commit
+        } else {
+            git_utils get-current-commit-timestamp
+        }
+        let dir_name = $"($timestamp)-($hash)"
+        $base_dir | path join "tmp" $dir_name
     } else if $ref {
         $base_dir | path join "ref"
     } else {

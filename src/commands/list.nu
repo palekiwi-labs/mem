@@ -118,23 +118,39 @@ def enrich-with-commit-data [
     files: list
     branches: list
 ] {
-    # 1. Get HEAD commits for branches
+    # Get HEAD commits for branches (for root/ref files)
     let branch_heads = ($branches | each {|b|
         git_utils get-branch-head-info $b
     })
     
-    # 2. Get explicit commits from trace/tmp
-    let explicit_hashes = ($files | where hash != null | get hash | uniq)
+    # Collect files needing git queries (legacy trace/tmp or root/ref)
+    let files_with_timestamp = ($files | where {|f|
+        $f.category in ["trace", "tmp"] and $f.timestamp != null
+    })
+    
+    let files_needing_query = ($files | where {|f|
+        not ($f.category in ["trace", "tmp"] and $f.timestamp != null)
+    })
+    
+    # Get explicit commits from files needing queries
+    let explicit_hashes = ($files_needing_query | where hash != null | get hash | uniq)
     let commit_data = if ($explicit_hashes | is-empty) {
         []
     } else {
         git_utils get-commit-info-batch $explicit_hashes
     }
     
-    # 3. Enrich each file
-    $files | each {|file|
+    # Process files with embedded timestamps (no git query needed)
+    let enriched_with_ts = ($files_with_timestamp | each {|file|
+        $file
+        | insert commit_hash $file.hash
+        | insert commit_timestamp $file.timestamp
+    })
+    
+    # Process files needing git queries
+    let enriched_needs_query = ($files_needing_query | each {|file|
         if $file.hash != null {
-            # File has explicit commit (trace/tmp)
+            # File has explicit commit (legacy trace/tmp)
             let matches = ($commit_data | where hash == $file.hash)
             if ($matches | length) > 0 {
                 let info = ($matches | first)
@@ -160,7 +176,10 @@ def enrich-with-commit-data [
                 | insert commit_timestamp 0
             }
         }
-    }
+    })
+    
+    # Combine results
+    $enriched_with_ts | append $enriched_needs_query
 }
 
 # Parse artifact path to extract metadata
@@ -185,21 +204,47 @@ def parse-artifact-path [
     # Determine category and hash
     let category_info = if ($rest | length) == 1 {
         # Root file: dev/plan.md
-        {category: "root", hash: null, depth: 1}
+        {category: "root", hash: null, timestamp: null, depth: 1}
     } else {
         let first_component = ($rest | first)
         if $first_component in ["trace", "tmp", "ref"] {
             # Categorized file
             if ($rest | length) == 2 {
                 # No hash: dev/ref/doc.md
-                {category: $first_component, hash: null, depth: 2}
+                {category: $first_component, hash: null, timestamp: null, depth: 2}
             } else {
-                # With hash: dev/trace/abc123/log.txt
-                {category: $first_component, hash: ($rest | get 1), depth: ($rest | length)}
+                # With hash: dev/trace/1738195200-abc123f/log.txt (new format)
+                # Or legacy: dev/trace/abc123f/log.txt
+                let hash_part = ($rest | get 1)
+                
+                # Parse timestamp-hash or legacy hash-only format
+                let hash_info = if ($hash_part | str contains "-") {
+                    # New format: <timestamp>-<hash>
+                    let parts = ($hash_part | split row "-")
+                    if ($parts | length) >= 2 {
+                        {
+                            hash: ($parts | get 1),
+                            timestamp: ($parts | get 0 | into int)
+                        }
+                    } else {
+                        # Malformed, treat as legacy
+                        {hash: $hash_part, timestamp: null}
+                    }
+                } else {
+                    # Legacy format: hash only
+                    {hash: $hash_part, timestamp: null}
+                }
+                
+                {
+                    category: $first_component,
+                    hash: $hash_info.hash,
+                    timestamp: $hash_info.timestamp,
+                    depth: ($rest | length)
+                }
             }
         } else {
             # Unknown structure, treat as root
-            {category: "root", hash: null, depth: ($rest | length)}
+            {category: "root", hash: null, timestamp: null, depth: ($rest | length)}
         }
     }
     
@@ -212,6 +257,7 @@ def parse-artifact-path [
         branch: $branch
         category: $category_info.category
         hash: $category_info.hash
+        timestamp: $category_info.timestamp
         depth: $category_info.depth
     }
 }
