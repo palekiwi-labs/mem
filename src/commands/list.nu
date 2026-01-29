@@ -20,45 +20,32 @@ export def main [
     let git_root = git_utils get-git-root
     let mem_dir = $git_root | path join $config.dir_name
 
-    # 3. Get all files from filesystem
     cd $mem_dir
     
     mut fd_flags = ["--type", "f", "--hidden", "--exclude", ".git" ]
 
-    $fd_flags = if $include_ignored {
-        ($fd_flags | append [ "--no-ignore"])
-    } else {
-        $fd_flags
+    if $include_ignored {
+        $fd_flags = ($fd_flags | append [ "--no-ignore"])
     }
 
-    let all_paths = run-external "fd" ...$fd_flags | lines
-    
-    if ($all_paths | is-empty) {
-        return
-    }
+    let search_path = if $all { ["."] } else { ["." $current_branch] }
 
-    # 4. Parse and filter paths
-    let files = $all_paths | each {|p| parse-artifact-path $p $git_root } | compact
+    let files = run-external "fd" ...$search_path ...$fd_flags 
+    | lines
+    | each {|p| parse-artifact-path $p $git_root } | compact
     
-    # 5. Filter by branch if not --all
-    let filtered = if $all {
-        $files
-    } else {
-        $files | where branch == $current_branch
-    }
-    
-    # 6. Apply depth filter if specified
+    # Apply depth filter if specified
     let depth_filtered = if $depth > 0 {
-        $filtered | where depth <= $depth
+        $files | where depth <= $depth
     } else {
-        $filtered
+        $files
     }
     
     if ($depth_filtered | is-empty) {
         return
     }
 
-    # 7. Enrich with commit metadata
+    # Enrich with commit metadata
     cd $git_root  # Switch to main repo context
     
     let branches_to_query = if $all {
