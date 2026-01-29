@@ -28,11 +28,9 @@ export def main [
     cd $mem_dir
     
     let all_paths = if $include_ignored {
-        # Include all files except .git directories
-        (^fd --type f --hidden --no-ignore --exclude .git | lines)
+        fd --type f --hidden --no-ignore --exclude .git | lines
     } else {
-        # Exclude tmp/, ref/, and .git directories
-        (^fd --type f --hidden --no-ignore --exclude tmp --exclude ref --exclude .git | lines)
+        fd --type f --hidden | lines
     }
     
     if ($all_paths | is-empty) {
