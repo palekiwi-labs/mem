@@ -29,12 +29,10 @@ export def main [
     
     let all_paths = if $include_ignored {
         # Include all files except .git directories
-        (^find . -type f -not -path '*/.git/*' | lines | each {|line| $line | str replace --regex '^\./' '' } | where {|line| $line != ""})
+        (^fd --type f --hidden --no-ignore --exclude .git | lines | where {|line| $line != ""})
     } else {
         # Exclude tmp/, ref/, and .git directories
-        (^find . -type f -not -path '*/tmp/*' -not -path '*/ref/*' -not -path '*/.git/*' | lines 
-         | each {|line| $line | str replace --regex '^\./' '' }
-         | where {|line| $line != ""})
+        (^fd --type f --hidden --no-ignore --exclude tmp --exclude ref --exclude .git | lines | where {|line| $line != ""})
     }
     
     if ($all_paths | is-empty) {
