@@ -20,27 +20,25 @@ export def main [
     let git_root = git_utils get-git-root
     let mem_dir = $git_root | path join $config.dir_name
 
-    if not ($mem_dir | path exists) {
-        return
-    }
-
     # 3. Get all files from filesystem
     cd $mem_dir
     
-    let all_paths = if $include_ignored {
-        fd --type f --hidden --no-ignore --exclude .git | lines
+    mut fd_flags = ["--type", "f", "--hidden", "--exclude", ".git" ]
+
+    $fd_flags = if $include_ignored {
+        ($fd_flags | append [ "--no-ignore"])
     } else {
-        fd --type f --hidden | lines
+        $fd_flags
     }
+
+    let all_paths = run-external "fd" ...$fd_flags | lines
     
     if ($all_paths | is-empty) {
         return
     }
 
     # 4. Parse and filter paths
-    let files = ($all_paths | each {|p|
-        parse-artifact-path $p $git_root
-    } | compact)
+    let files = $all_paths | each {|p| parse-artifact-path $p $git_root } | compact
     
     # 5. Filter by branch if not --all
     let filtered = if $all {
