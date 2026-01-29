@@ -28,11 +28,11 @@ export def main [
     cd $mem_dir
     
     let all_paths = if $include_ignored {
-        # Include all files
-        (^find . -type f | lines | each {|line| $line | str replace --regex '^\./' '' } | where {|line| $line != ""})
+        # Include all files except .git directories
+        (^find . -type f -not -path '*/.git/*' | lines | each {|line| $line | str replace --regex '^\./' '' } | where {|line| $line != ""})
     } else {
-        # Exclude tmp/ and ref/ directories
-        (^find . -type f -not -path '*/tmp/*' -not -path '*/ref/*' | lines 
+        # Exclude tmp/, ref/, and .git directories
+        (^find . -type f -not -path '*/tmp/*' -not -path '*/ref/*' -not -path '*/.git/*' | lines 
          | each {|line| $line | str replace --regex '^\./' '' }
          | where {|line| $line != ""})
     }
