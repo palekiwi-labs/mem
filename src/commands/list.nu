@@ -24,20 +24,18 @@ export def main [
         return
     }
 
-    # 3. Get files from git
+    # 3. Get all files from filesystem
     cd $mem_dir
     
-    let tracked = git ls-files | lines
-    let untracked = git ls-files --others --exclude-standard | lines
-    
-    # Optionally include gitignored files
-    let ignored = if $include_ignored {
-        discover-ignored-files $mem_dir
+    let all_paths = if $include_ignored {
+        # Include all files
+        (^find . -type f | lines | each {|line| $line | str replace --regex '^\./' '' } | where {|line| $line != ""})
     } else {
-        []
+        # Exclude tmp/ and ref/ directories
+        (^find . -type f -not -path '*/tmp/*' -not -path '*/ref/*' | lines 
+         | each {|line| $line | str replace --regex '^\./' '' }
+         | where {|line| $line != ""})
     }
-    
-    let all_paths = $tracked | append $untracked | append $ignored | uniq
     
     if ($all_paths | is-empty) {
         return
@@ -85,32 +83,6 @@ export def main [
     } else {
         $output | get path | str join "\n"
     }
-}
-
-# Discover gitignored files (tmp/ and ref/), excluding cloned repos in ref/repos/
-def discover-ignored-files [mem_dir: string] {
-    cd $mem_dir
-    
-    # Find all files in */tmp/
-    let tmp_result = (do { ^find . -path '*/tmp/*' -type f } | complete)
-    let tmp_files = if $tmp_result.exit_code == 0 {
-        $tmp_result.stdout | lines | each {|line| $line | str replace --regex '^\./' '' } | where {|line| $line != ""}
-    } else {
-        []
-    }
-    
-    # Find all files in */ref/ but exclude those in repos/ subdirectory
-    let ref_result = (do { ^find . -path '*/ref/*' -not -path '*/ref/repos/*' -type f } | complete)
-    let ref_files = if $ref_result.exit_code == 0 {
-        $ref_result.stdout 
-        | lines 
-        | each {|line| $line | str replace --regex '^\./' '' }
-        | where {|line| $line != ""}
-    } else {
-        []
-    }
-    
-    $tmp_files | append $ref_files
 }
 
 # Enrich files with commit metadata
