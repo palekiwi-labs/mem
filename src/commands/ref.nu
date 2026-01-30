@@ -10,6 +10,7 @@ export def add [
     source: string         # Source identifier (github:org/repo, path:/file/path)
     --force(-f)            # Overwrite existing reference
     --depth: int           # Shallow clone depth for git repositories
+    --ssh                  # Use SSH protocol instead of HTTPS for GitHub repos
 ] {
     # 1. Environment Checks
     let branch = (git_utils check-environment)
@@ -31,7 +32,7 @@ export def add [
     
     # 4. Handle different source types
     if $source_type == "github" {
-        handle-github $source_location $ref_dir $git_root $force $depth
+        handle-github $source_location $ref_dir $git_root $force $depth $ssh
     } else if $source_type == "path" {
         handle-path $source_location $ref_dir $git_root $force
     } else {
@@ -46,6 +47,7 @@ def handle-github [
     git_root: string       # Git root for relative paths
     force: bool            # Overwrite existing reference
     depth?: int            # Shallow clone depth (optional)
+    ssh: bool = false      # Use SSH instead of HTTPS
 ] {
     # Parse location (org/repo, org/repo/branch, org/repo@commit)
     let has_commit = ($location | str contains "@")
@@ -98,7 +100,11 @@ def handle-github [
     # Clone repository
     print $"Cloning github:($location)..."
     
-    let clone_url = $"https://github.com/($parts.repo_path).git"
+    let clone_url = if $ssh {
+        $"git@github.com:($parts.repo_path).git"
+    } else {
+        $"https://github.com/($parts.repo_path).git"
+    }
     
     # Build clone command with optional depth
     let depth_args = if $depth == null {

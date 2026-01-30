@@ -100,7 +100,7 @@ def "main pull" [
 
 # Manage reference materials
 def "main ref" [] {
-    print "Usage: mem ref add <source>
+    print "Usage: mem ref add <source> [OPTIONS]
     
 Add reference materials to .mem/<branch>/ref/
 
@@ -110,10 +110,16 @@ SOURCES:
     github:<org>/<repo>@<commit>  Clone at specific commit
     path:<filepath>               Copy local file or directory
 
+OPTIONS:
+    --ssh                         Use SSH protocol (git@github.com:org/repo.git)
+    --depth <N>                   Shallow clone with specified depth
+    --force, -f                   Overwrite existing reference
+
 EXAMPLES:
     mem ref add github:octocat/hello-world
     mem ref add github:palekiwi/mem/develop
     mem ref add github:org/repo@abc123d
+    mem ref add github:myorg/private-repo --ssh
     mem ref add path:/etc/config.yaml
     mem ref add path:~/Documents/api-docs/
 "
@@ -124,9 +130,10 @@ def "main ref add" [
     source: string         # Source identifier (github:org/repo, path:/file/path)
     --force(-f)            # Overwrite existing reference
     --depth: int           # Shallow clone depth for git repositories
+    --ssh                  # Use SSH protocol for GitHub repos
 ] {
     try {
-        ref add $source --force=$force --depth=$depth
+        ref add $source --force=$force --depth=$depth --ssh=$ssh
     } catch { |err|
         errors pretty-print $err
     }
