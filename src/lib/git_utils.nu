@@ -80,6 +80,19 @@ export def get-current-commit-short [] {
     git rev-parse --short HEAD | str trim
 }
 
+export def get-current-commit-timestamp [] {
+    git log -1 --format='%ct' HEAD | str trim | into int
+}
+
+export def get-commit-timestamp [hash: string] {
+    let result = (git log -1 --format='%ct' $hash | complete)
+    if $result.exit_code == 0 {
+        $result.stdout | str trim | into int
+    } else {
+        error make {msg: $"Failed to get timestamp for commit ($hash)"}
+    }
+}
+
 export def sanitize-branch-name [name: string] {
     $name | str replace --all "/" "-"
 }

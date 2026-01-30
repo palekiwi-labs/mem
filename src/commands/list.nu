@@ -20,53 +20,32 @@ export def main [
     let git_root = git_utils get-git-root
     let mem_dir = $git_root | path join $config.dir_name
 
-    if not ($mem_dir | path exists) {
-        return
-    }
-
-    # 3. Get files from git
     cd $mem_dir
     
-    let tracked = git ls-files | lines
-    let untracked = git ls-files --others --exclude-standard | lines
-    
-    # Optionally include gitignored files
-    let ignored = if $include_ignored {
-        discover-ignored-files $mem_dir
-    } else {
-        []
-    }
-    
-    let all_paths = $tracked | append $untracked | append $ignored | uniq
-    
-    if ($all_paths | is-empty) {
-        return
+    mut fd_flags = ["--type", "f", "--hidden", "--exclude", ".git" ]
+
+    if $include_ignored {
+        $fd_flags = ($fd_flags | append [ "--no-ignore"])
     }
 
-    # 4. Parse and filter paths
-    let files = ($all_paths | each {|p|
-        parse-artifact-path $p $git_root
-    } | compact)
+    let search_path = if $all { ["."] } else { ["." $current_branch] }
+
+    let files = run-external "fd" ...$search_path ...$fd_flags 
+    | lines
+    | each {|p| parse-artifact-path $p $git_root } | compact
     
-    # 5. Filter by branch if not --all
-    let filtered = if $all {
-        $files
-    } else {
-        $files | where branch == $current_branch
-    }
-    
-    # 6. Apply depth filter if specified
+    # Apply depth filter if specified
     let depth_filtered = if $depth > 0 {
-        $filtered | where depth <= $depth
+        $files | where depth <= $depth
     } else {
-        $filtered
+        $files
     }
     
     if ($depth_filtered | is-empty) {
         return
     }
 
-    # 7. Enrich with commit metadata
+    # Enrich with commit metadata
     cd $git_root  # Switch to main repo context
     
     let branches_to_query = if $all {
@@ -87,54 +66,44 @@ export def main [
     }
 }
 
-# Discover gitignored files (tmp/ and ref/), excluding cloned repos in ref/repos/
-def discover-ignored-files [mem_dir: string] {
-    cd $mem_dir
-    
-    # Find all files in */tmp/
-    let tmp_result = (do { ^find . -path '*/tmp/*' -type f } | complete)
-    let tmp_files = if $tmp_result.exit_code == 0 {
-        $tmp_result.stdout | lines | each {|line| $line | str replace --regex '^\./' '' } | where {|line| $line != ""}
-    } else {
-        []
-    }
-    
-    # Find all files in */ref/ but exclude those in repos/ subdirectory
-    let ref_result = (do { ^find . -path '*/ref/*' -not -path '*/ref/repos/*' -type f } | complete)
-    let ref_files = if $ref_result.exit_code == 0 {
-        $ref_result.stdout 
-        | lines 
-        | each {|line| $line | str replace --regex '^\./' '' }
-        | where {|line| $line != ""}
-    } else {
-        []
-    }
-    
-    $tmp_files | append $ref_files
-}
-
 # Enrich files with commit metadata
 def enrich-with-commit-data [
     files: list
     branches: list
 ] {
-    # 1. Get HEAD commits for branches
+    # Get HEAD commits for branches (for root/ref files)
     let branch_heads = ($branches | each {|b|
         git_utils get-branch-head-info $b
     })
     
-    # 2. Get explicit commits from trace/tmp
-    let explicit_hashes = ($files | where hash != null | get hash | uniq)
+    # Collect files needing git queries (legacy trace/tmp or root/ref)
+    let files_with_timestamp = ($files | where {|f|
+        $f.category in ["trace", "tmp"] and $f.timestamp != null
+    })
+    
+    let files_needing_query = ($files | where {|f|
+        not ($f.category in ["trace", "tmp"] and $f.timestamp != null)
+    })
+    
+    # Get explicit commits from files needing queries
+    let explicit_hashes = ($files_needing_query | where hash != null | get hash | uniq)
     let commit_data = if ($explicit_hashes | is-empty) {
         []
     } else {
         git_utils get-commit-info-batch $explicit_hashes
     }
     
-    # 3. Enrich each file
-    $files | each {|file|
+    # Process files with embedded timestamps (no git query needed)
+    let enriched_with_ts = ($files_with_timestamp | each {|file|
+        $file
+        | insert commit_hash $file.hash
+        | insert commit_timestamp $file.timestamp
+    })
+    
+    # Process files needing git queries
+    let enriched_needs_query = ($files_needing_query | each {|file|
         if $file.hash != null {
-            # File has explicit commit (trace/tmp)
+            # File has explicit commit (legacy trace/tmp)
             let matches = ($commit_data | where hash == $file.hash)
             if ($matches | length) > 0 {
                 let info = ($matches | first)
@@ -160,7 +129,10 @@ def enrich-with-commit-data [
                 | insert commit_timestamp 0
             }
         }
-    }
+    })
+    
+    # Combine results
+    $enriched_with_ts | append $enriched_needs_query
 }
 
 # Parse artifact path to extract metadata
@@ -185,21 +157,47 @@ def parse-artifact-path [
     # Determine category and hash
     let category_info = if ($rest | length) == 1 {
         # Root file: dev/plan.md
-        {category: "root", hash: null, depth: 1}
+        {category: "root", hash: null, timestamp: null, depth: 1}
     } else {
         let first_component = ($rest | first)
         if $first_component in ["trace", "tmp", "ref"] {
             # Categorized file
             if ($rest | length) == 2 {
                 # No hash: dev/ref/doc.md
-                {category: $first_component, hash: null, depth: 2}
+                {category: $first_component, hash: null, timestamp: null, depth: 2}
             } else {
-                # With hash: dev/trace/abc123/log.txt
-                {category: $first_component, hash: ($rest | get 1), depth: ($rest | length)}
+                # With hash: dev/trace/1738195200-abc123f/log.txt (new format)
+                # Or legacy: dev/trace/abc123f/log.txt
+                let hash_part = ($rest | get 1)
+                
+                # Parse timestamp-hash or legacy hash-only format
+                let hash_info = if ($hash_part | str contains "-") {
+                    # New format: <timestamp>-<hash>
+                    let parts = ($hash_part | split row "-")
+                    if ($parts | length) >= 2 {
+                        {
+                            hash: ($parts | get 1),
+                            timestamp: ($parts | get 0 | into int)
+                        }
+                    } else {
+                        # Malformed, treat as legacy
+                        {hash: $hash_part, timestamp: null}
+                    }
+                } else {
+                    # Legacy format: hash only
+                    {hash: $hash_part, timestamp: null}
+                }
+                
+                {
+                    category: $first_component,
+                    hash: $hash_info.hash,
+                    timestamp: $hash_info.timestamp,
+                    depth: ($rest | length)
+                }
             }
         } else {
             # Unknown structure, treat as root
-            {category: "root", hash: null, depth: ($rest | length)}
+            {category: "root", hash: null, timestamp: null, depth: ($rest | length)}
         }
     }
     
@@ -212,6 +210,7 @@ def parse-artifact-path [
         branch: $branch
         category: $category_info.category
         hash: $category_info.hash
+        timestamp: $category_info.timestamp
         depth: $category_info.depth
     }
 }

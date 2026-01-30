@@ -19,7 +19,7 @@
             
             src = ./.;
             
-            nativeBuildInputs = [ pkgs.makeWrapper ];
+            nativeBuildInputs = [ pkgs.makeWrapper pkgs.fd ];
             
             installPhase = ''
               mkdir -p $out/bin $out/share/mem
@@ -44,6 +44,7 @@
 
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
+            fd
             nushell
           ];
 
