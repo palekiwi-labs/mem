@@ -10,7 +10,7 @@ mem provides a structured way to store and manage context, documentation, and ar
 
 - Git-based context storage using worktrees and orphan branches
 - Branch-aware context organization (content tracked per git branch)
-- Multiple content categories: root, trace, tmp, ref
+- Multiple content categories: spec, trace, tmp, ref
 - Reference material management (clone GitHub repos, copy local files)
 - Automatic .gitignore for temporary files
 - Git integration (status, diff, push, pull)
@@ -73,24 +73,27 @@ This structure is automatically managed by the `mem` CLI. You do not need to cre
 .mem/
 ├── .gitignore           # Ignores */tmp/ and */ref/
 ├── <branch-name>/       # Per-branch directories
-│   ├── plan.md          # Root-level context
-│   ├── trace/           # Commit-tied logs
-│   │   └── <commit>/    # Specific commit hash
+│   ├── spec/            # Specifications (tracked)
+│   │   ├── plan.md
+│   │   └── tickets/
+│   │       └── JIRA-123.md
+│   ├── trace/           # Commit-tied logs (tracked)
+│   │   └── <timestamp>-<commit>/
 │   │       └── log.txt
-│   ├── tmp/             # Temporary content (git-ignored)
-│   │   └── <commit>/
+│   ├── tmp/             # Temporary content (ignored)
+│   │   └── <timestamp>-<commit>/
 │   │       └── cache.json
-│   └── ref/             # Reference materials (git-ignored)
-│       ├── config.yaml  # Individual reference files
-│       └── repos/       # Cloned git repositories (excluded from listings)
+│   └── ref/             # Reference materials (ignored)
+│       ├── config.yaml
+│       └── repos/
 │           └── octocat/
 │               └── hello-world/
 ```
 
 **Tracked vs Untracked Content:**
-- **Root files** (e.g., `.mem/dev/plan.md`): **Git-tracked** long-lived context that persists across commits.
-- **Trace files** (e.g., `.mem/dev/trace/abc123/analysis.md`): **Git-tracked** logs and analysis tied to specific commits (e.g., AI analysis of a failure).
-- **Tmp files** (e.g., `.mem/dev/tmp/abc123/error.log`): **Git-ignored** throw-away artifacts (e.g., raw CI logs, error logs) corresponding to a specific commit state.
+- **Spec files** (e.g., `.mem/dev/spec/plan.md`): **Git-tracked** specifications that drive development (plans, tickets, designs, requirements).
+- **Trace files** (e.g., `.mem/dev/trace/1738195200-abc123f/analysis.md`): **Git-tracked** logs and analysis tied to specific commits (e.g., AI analysis of a failure).
+- **Tmp files** (e.g., `.mem/dev/tmp/1738195200-abc123f/error.log`): **Git-ignored** throw-away artifacts (e.g., raw CI logs, error logs) corresponding to a specific commit state.
 - **Ref files** (e.g., `.mem/dev/ref/config.yaml`): **Git-ignored** reference material that provides context not inferable from the repo itself.
 - **Ref repos** (e.g., `.mem/dev/ref/repos/octocat/hello-world/`): **Git-ignored** cloned git repositories (always excluded from `list` output even with `--include-ignored`).
 
@@ -114,11 +117,14 @@ This creates:
 Create context files in various categories:
 
 ```bash
-# Create file in root of current branch
+# Create file in spec/ directory
 mem add plan.md
 
+# Create nested spec file
+mem add tickets/JIRA-123.md
+
 # Create file with content
-mem add note.txt "Important information"
+mem add plan.md "# Project Plan"
 
 # Create file in trace/ directory with current commit hash
 mem add log.txt --trace
@@ -189,10 +195,19 @@ mem list --all --include-ignored --json
 ```json
 [
   {
-    "path": ".mem/dev/plan.md",
+    "path": ".mem/dev/spec/plan.md",
     "name": "plan.md",
     "branch": "dev",
-    "category": "root",
+    "category": "spec",
+    "hash": null,
+    "commit_hash": "a11f8b2",
+    "commit_timestamp": 1769499452
+  },
+  {
+    "path": ".mem/dev/spec/tickets/JIRA-123.md",
+    "name": "tickets/JIRA-123.md",
+    "branch": "dev",
+    "category": "spec",
     "hash": null,
     "commit_hash": "a11f8b2",
     "commit_timestamp": 1769499452
@@ -202,11 +217,11 @@ mem list --all --include-ignored --json
 
 **Field Descriptions:**
 - `path`: Full relative path from repository root
-- `name`: Filename
+- `name`: Filename or path relative to category directory (includes subdirectories)
 - `branch`: Branch name
-- `category`: File category (root, trace, tmp, ref)
-- `hash`: Commit hash if file is in trace/tmp/ subdirectory (null for root/ref)
-- `commit_hash`: Git commit hash (branch HEAD for root/ref files, explicit commit for trace/tmp)
+- `category`: File category (spec, trace, tmp, ref)
+- `hash`: Commit hash if file is in trace/tmp/ subdirectory (null for spec/ref)
+- `commit_hash`: Git commit hash (branch HEAD for spec/ref files, explicit commit for trace/tmp)
 - `commit_timestamp`: Unix timestamp of the commit (useful for sorting chronologically)
 
 ### Cleanup
@@ -259,6 +274,34 @@ mem pull
 
 # Pull from specific remote
 mem pull --remote upstream
+```
+
+### Upgrading from v1.x
+
+Version 2.0 introduces a breaking change: files that were previously at the branch root now live in the `spec/` directory.
+
+#### Manual Migration
+
+If you have existing `.mem/` data with the old structure:
+
+**Option A: Migrate existing files**
+```bash
+cd .mem/<branch>
+mkdir spec
+mv *.md spec/
+mv <any-other-dirs> spec/
+git add .
+git commit -m "Migrate to spec/ structure"
+```
+
+**Option B: Start fresh**
+```bash
+# Remove old structure
+git worktree remove .mem
+git branch -D mem
+
+# Reinitialize
+mem init
 ```
 
 ### Configuration
