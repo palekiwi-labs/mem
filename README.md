@@ -159,6 +159,12 @@ mem ref add github:octocat/hello-world@abc1234
 # Shallow clone
 mem ref add github:octocat/hello-world --depth 1
 
+# Clone private repository via SSH
+mem ref add github:myorg/private-repo --ssh
+
+# Combine SSH with other flags
+mem ref add github:myorg/private-repo --ssh --depth 1
+
 # Copy local file or directory
 mem ref add path:/etc/config.yaml
 mem ref add path:~/Documents/api-docs/
@@ -166,6 +172,24 @@ mem ref add path:~/Documents/api-docs/
 # Overwrite existing reference
 mem ref add github:octocat/hello-world --force
 ```
+
+#### Using SSH for Private Repositories
+
+For private repositories, use the `--ssh` flag to clone via SSH:
+
+```bash
+mem ref add github:myorg/private-repo --ssh
+```
+
+**Prerequisites:**
+- SSH key configured with GitHub
+- Test SSH access: `ssh -T git@github.com`
+
+**Alternative:** Configure git to use SSH globally:
+```bash
+git config --global url."git@github.com:".insteadOf "https://github.com/"
+```
+With this configuration, `mem` will automatically use SSH even without the `--ssh` flag.
 
 ### List Context/Artifacts
 
