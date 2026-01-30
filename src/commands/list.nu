@@ -135,78 +135,86 @@ def enrich-with-commit-data [
     $enriched_with_ts | append $enriched_needs_query
 }
 
+# Get relative name relative to category directory
+def get-relative-name [rel_path: string, category: string] {
+    let components = $rel_path | path split
+    let skip_count = match $category {
+        "spec" | "ref" => 2
+        "trace" | "tmp" => 3
+    }
+    $components | skip $skip_count | path join
+}
+
 # Parse artifact path to extract metadata
 # Path format: <branch>/<category>/<hash?>/<file>
 # Examples:
-#   dev/trace/abc123/log.txt -> {branch: dev, category: trace, hash: abc123, ...}
+#   dev/trace/1738195200-abc123f/log.txt -> {branch: dev, category: trace, hash: abc123f, ...}
 #   dev/ref/doc.md -> {branch: dev, category: ref, hash: null, ...}
-#   dev/plan.md -> {branch: dev, category: root, hash: null, ...}
+#   dev/spec/plan.md -> {branch: dev, category: spec, hash: null, ...}
 def parse-artifact-path [
     rel_path: string
     git_root: string
 ] {
     let parts = $rel_path | path split
-    
+
     if ($parts | length) < 2 {
         return null
     }
-    
-    let branch = $parts | first
-    let rest = $parts | skip 1
-    
-    # Determine category and hash
-    let category_info = if ($rest | length) == 1 {
-        # Root file: dev/plan.md
-        {category: "root", hash: null, timestamp: null, depth: 1}
-    } else {
-        let first_component = ($rest | first)
-        if $first_component in ["trace", "tmp", "ref"] {
-            # Categorized file
-            if ($rest | length) == 2 {
-                # No hash: dev/ref/doc.md
-                {category: $first_component, hash: null, timestamp: null, depth: 2}
-            } else {
-                # With hash: dev/trace/1738195200-abc123f/log.txt (new format)
-                # Or legacy: dev/trace/abc123f/log.txt
-                let hash_part = ($rest | get 1)
-                
-                # Parse timestamp-hash or legacy hash-only format
-                let hash_info = if ($hash_part | str contains "-") {
-                    # New format: <timestamp>-<hash>
-                    let parts = ($hash_part | split row "-")
-                    if ($parts | length) >= 2 {
-                        {
-                            hash: ($parts | get 1),
-                            timestamp: ($parts | get 0 | into int)
-                        }
-                    } else {
-                        # Malformed, treat as legacy
-                        {hash: $hash_part, timestamp: null}
+
+    let branch = $parts | get 0
+    let category = $parts | get 1
+
+    # Validate category
+    if $category not-in ["spec", "trace", "tmp", "ref"] {
+        return null
+    }
+
+    # Determine hash and timestamp based on category
+    let category_info = match $category {
+        "spec" | "ref" => {
+            category: $category
+            hash: null
+            timestamp: null
+            depth: ($parts | length)
+        }
+        "trace" | "tmp" => {
+            if ($parts | length) < 3 {
+                return null
+            }
+            let hash_part = ($parts | get 2)
+
+            # Parse timestamp-hash or legacy hash-only format
+            let hash_info = if ($hash_part | str contains "-") {
+                # New format: <timestamp>-<hash>
+                let hash_parts = ($hash_part | split row "-")
+                if ($hash_parts | length) >= 2 {
+                    {
+                        hash: ($hash_parts | get 1),
+                        timestamp: ($hash_parts | get 0 | into int)
                     }
                 } else {
-                    # Legacy format: hash only
+                    # Malformed, treat as legacy
                     {hash: $hash_part, timestamp: null}
                 }
-                
-                {
-                    category: $first_component,
-                    hash: $hash_info.hash,
-                    timestamp: $hash_info.timestamp,
-                    depth: ($rest | length)
-                }
+            } else {
+                # Legacy format: hash only
+                {hash: $hash_part, timestamp: null}
             }
-        } else {
-            # Unknown structure, treat as root
-            {category: "root", hash: null, timestamp: null, depth: ($rest | length)}
+
+            {
+                category: $category
+                hash: $hash_info.hash
+                timestamp: $hash_info.timestamp
+                depth: ($parts | length)
+            }
         }
     }
-    
+
     let mem_dir_name = (load).dir_name
-    let full_path = ($git_root | path join $mem_dir_name $rel_path)
-    
+
     {
         path: $"($mem_dir_name)/($rel_path)"
-        name: ($rel_path | path basename)
+        name: (get-relative-name $rel_path $category)
         branch: $branch
         category: $category_info.category
         hash: $category_info.hash

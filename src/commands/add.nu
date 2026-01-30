@@ -47,7 +47,7 @@ export def main [
     } else if $ref {
         $base_dir | path join "ref"
     } else {
-        $base_dir
+        $base_dir | path join "spec"
     }
     
     let target_path = ($target_dir | path join $filename)
