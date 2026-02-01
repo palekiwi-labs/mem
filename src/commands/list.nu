@@ -14,6 +14,7 @@ export def main [
 ] {
     # 1. Environment Checks
     let current_branch = git_utils check-environment
+    let sanitized_branch = git_utils sanitize-branch-name $current_branch
     let config = load
     
     # 2. Path Setup
@@ -28,7 +29,7 @@ export def main [
         $fd_flags = ($fd_flags | append [ "--no-ignore"])
     }
 
-    let search_path = if $all { ["."] } else { ["." $current_branch] }
+    let search_path = if $all { ["."] } else { ["." $sanitized_branch] }
 
     let files = run-external "fd" ...$search_path ...$fd_flags 
     | lines
