@@ -11,6 +11,7 @@ export def main [
     --trace                # Save to trace/ directory
     --tmp                  # Save to tmp/ directory
     --ref                  # Save to ref/ directory
+    --bin                  # Save to bin/ directory
     --commit: string       # Specify commit hash (requires --trace or --tmp)
     --force(-f)            # Overwrite existing file
 ] {
@@ -46,6 +47,8 @@ export def main [
         $base_dir | path join "tmp" $dir_name
     } else if $ref {
         $base_dir | path join "ref"
+    } else if $bin {
+        $base_dir | path join "bin"
     } else {
         $base_dir | path join "spec"
     }
