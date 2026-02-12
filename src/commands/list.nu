@@ -72,7 +72,7 @@ def enrich-with-commit-data [
     files: list
     branches: list
 ] {
-    # Get HEAD commits for branches (for root/ref files)
+    # Get HEAD commits for branches (for spec/bin/ref files)
     let branch_heads = ($branches | each {|b|
         git_utils get-branch-head-info $b
     })
@@ -117,7 +117,7 @@ def enrich-with-commit-data [
                 | insert commit_timestamp 0
             }
         } else {
-            # File has no explicit commit (root/ref) - use branch HEAD
+            # File has no explicit commit (spec/bin/ref) - use branch HEAD
             let matches = ($branch_heads | where branch == $file.branch)
             if ($matches | length) > 0 {
                 let branch_info = ($matches | first)
@@ -140,7 +140,7 @@ def enrich-with-commit-data [
 def get-relative-name [rel_path: string, category: string] {
     let components = $rel_path | path split
     let skip_count = match $category {
-        "spec" | "ref" => 2
+        "spec" | "bin" | "ref" => 2
         "trace" | "tmp" => 3
     }
     $components | skip $skip_count | path join
@@ -166,13 +166,13 @@ def parse-artifact-path [
     let category = $parts | get 1
 
     # Validate category
-    if $category not-in ["spec", "trace", "tmp", "ref"] {
+    if $category not-in ["spec", "bin", "trace", "tmp", "ref"] {
         return null
     }
 
     # Determine hash and timestamp based on category
     let category_info = match $category {
-        "spec" | "ref" => {
+        "spec" | "bin" | "ref" => {
             category: $category
             hash: null
             timestamp: null

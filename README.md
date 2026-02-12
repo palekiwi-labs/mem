@@ -10,7 +10,7 @@ mem provides a structured way to store and manage context, documentation, and ar
 
 - Git-based context storage using worktrees and orphan branches
 - Branch-aware context organization (content tracked per git branch)
-- Multiple content categories: spec, trace, tmp, ref
+- Multiple content categories: spec, bin, trace, tmp, ref
 - Reference material management (clone GitHub repos, copy local files)
 - Automatic .gitignore for temporary files
 - Git integration (status, diff, push, pull)
@@ -77,6 +77,10 @@ This structure is automatically managed by the `mem` CLI. You do not need to cre
 │   │   ├── plan.md
 │   │   └── tickets/
 │   │       └── JIRA-123.md
+│   ├── bin/             # Executable scripts (tracked)
+│   │   ├── deploy.sh
+│   │   └── scripts/
+│   │       └── build.sh
 │   ├── trace/           # Commit-tied logs (tracked)
 │   │   └── <timestamp>-<commit>/
 │   │       └── log.txt
@@ -92,6 +96,7 @@ This structure is automatically managed by the `mem` CLI. You do not need to cre
 
 **Tracked vs Untracked Content:**
 - **Spec files** (e.g., `.mem/dev/spec/plan.md`): **Git-tracked** specifications that drive development (plans, tickets, designs, requirements).
+- **Bin files** (e.g., `.mem/dev/bin/deploy.sh`): **Git-tracked** executable scripts (shell scripts, Python scripts, automation tools).
 - **Trace files** (e.g., `.mem/dev/trace/1738195200-abc123f/analysis.md`): **Git-tracked** logs and analysis tied to specific commits (e.g., AI analysis of a failure).
 - **Tmp files** (e.g., `.mem/dev/tmp/1738195200-abc123f/error.log`): **Git-ignored** throw-away artifacts (e.g., raw CI logs, error logs) corresponding to a specific commit state.
 - **Ref files** (e.g., `.mem/dev/ref/config.yaml`): **Git-ignored** reference material that provides context not inferable from the repo itself.
@@ -125,6 +130,17 @@ mem add tickets/JIRA-123.md
 
 # Create file with content
 mem add plan.md "# Project Plan"
+
+# Create executable script in bin/ directory
+mem add deploy.sh --bin
+
+# Create nested bin script
+mem add scripts/build.sh --bin
+
+# Create bin file with content (with shebang)
+mem add run.sh '#!/usr/bin/env bash
+
+echo "Hello"' --bin
 
 # Create file in trace/ directory with current commit hash
 mem add log.txt --trace

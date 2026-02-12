@@ -32,11 +32,12 @@ def "main add" [
     --trace                # Save to trace/ directory
     --tmp                  # Save to tmp/ directory
     --ref                  # Save to ref/ directory
+    --bin                  # Save to bin/ directory
     --commit: string       # Specify commit hash (requires --trace or --tmp)
     --force(-f)            # Overwrite existing file
 ] {
     try {
-        add $filename $content --trace=$trace --tmp=$tmp --ref=$ref --commit=$commit --force=$force
+        add $filename $content --trace=$trace --tmp=$tmp --ref=$ref --bin=$bin --commit=$commit --force=$force
     } catch { |err|
         errors pretty-print $err
     }
