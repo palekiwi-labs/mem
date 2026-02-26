@@ -207,6 +207,39 @@ git config --global url."git@github.com:".insteadOf "https://github.com/"
 ```
 With this configuration, `mem` will automatically use SSH even without the `--ssh` flag.
 
+### Manage Project Log
+
+Add entries to the project log for cross-session continuity. Agents should record investigations, decisions, and discoveries so that future sessions understand what was done and why.
+
+```bash
+# Simple entry with discovery and decision
+mem log add --title "Fixed parser bug" \
+  --found "Null pointer exception in edge case." \
+  --decided "Added null check before accessing field."
+
+# Entry with open question
+mem log add --title "Performance investigation" \
+  --found "Query takes 2 seconds on large datasets." \
+  --decided "Add composite index on user_id and created_at." \
+  --open "Should we also implement query caching?"
+
+# Entry with only found (discovery without decision yet)
+mem log add --title "Legacy code discovery" \
+  --found "Found old payment processing code still in production."
+
+# Entry with only decided (decision without discovery yet)
+mem log add --title "Architecture decision" \
+  --decided "Migrate to microservices starting with auth module."
+
+# Retroactive entry with custom commit
+mem log add --title "Bug root cause analysis" \
+  --found "Root cause was missing validation in input handler." \
+  --decided "Apply hotfix and add integration tests." \
+  --commit abc1234
+```
+
+The log file is located at `.mem/<branch>/spec/log.md` and is git-tracked, making it persistent across sessions and available in your repository history.
+
 ### List Context/Artifacts
 
 List tracked content:
