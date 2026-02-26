@@ -9,6 +9,7 @@ use commands/config.nu
 use commands/diff.nu
 use commands/init.nu
 use commands/list.nu
+use commands/log.nu
 use commands/prune.nu
 use commands/pull.nu
 use commands/push.nu
@@ -152,6 +153,60 @@ def "main prune" [
     }
 }
 
+# Manage project log
+def "main log" [] {
+    print "mem log - Manage project log
+
+USAGE:
+    mem log add [OPTIONS]
+
+SUBCOMMANDS:
+    add        Add an entry to the project log
+
+OPTIONS:
+    --title <string>         Short description (required)
+    --found <string>         What was discovered
+    --decided <string>       Decision made
+    --open <string>          Open question
+    --commit <hash>          Override commit hash (default: current HEAD)
+
+EXAMPLES:
+    # Simple entry
+    mem log add --title \"Fixed parser bug\" \\
+      --found \"Null pointer in edge case.\" \\
+      --decided \"Added null check.\"
+
+    # With open questions
+    mem log add --title \"Performance investigation\" \\
+      --found \"Query takes 2s on large datasets.\" \\
+      --decided \"Add caching layer.\" \\
+      --open \"Need benchmark suite?\"
+
+    # Custom commit
+    mem log add --title \"Bug analysis\" \\
+      --found \"Root cause identified.\" \\
+      --decided \"Apply hotfix.\" \\
+      --commit abc1234
+
+For more information, see: https://github.com/palekiwi-labs/mem
+"
+}
+
+# Add a log entry
+def "main log add" [
+    --title: string              # Short description (required)
+    --found: string              # What was discovered
+    --decided: string            # Newline-separated decisions
+    --open: string               # Newline-separated open questions
+    --commit: string             # Override commit hash
+] {
+    try {
+        log add --title=$title --found=$found --decided=$decided --open=$open --commit=$commit
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
 # Show current configuration
 def "main config" [--json] {
     try {
@@ -208,6 +263,7 @@ SUBCOMMANDS:
     add        Create a new artifact file
     ref        Manage reference materials (clone repos, copy files)
     list       List artifacts (respects .gitignore)
+    log        Manage project log (add entries)
     prune      Delete temporary and reference files (cleanup)
     status     Show git status of mem directory
     diff       Show git diff of changes in mem directory
@@ -247,6 +303,7 @@ EXAMPLES:
     mem list --all                         # List files for all branches
     mem list --include-ignored             # Include tmp/ and ref/ files
     mem list -ai --json                    # All branches, with ignored files, JSON output
+    mem log add --title \"Fixed bug\" --found \"Root cause\" --decided \"Applied fix\"
     mem prune                              # Delete tmp/ and ref/ for current branch
     mem prune --all                        # Delete for all branches (with confirmation)
     mem prune --force                      # Skip confirmation prompt
