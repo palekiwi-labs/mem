@@ -5,6 +5,6 @@
 
 export const DEFAULTS = {
     branch_name: "mem"
-    dir_name: ".mem"
+    dir_name: ".agents"
 }
 
