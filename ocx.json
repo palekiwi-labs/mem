@@ -1,3 +1,4 @@
 {
+  "nix_opencode_command": ["nix", "develop", "-c", "opencode"],
   "custom_base_dockerfile": "nushell/Dockerfile"
 }
