@@ -240,6 +240,14 @@ mem log add --title "Bug root cause analysis" \
 
 The log file is located at `.mem/<branch>/spec/log.md` and is git-tracked, making it persistent across sessions and available in your repository history.
 
+**Display all log entries:**
+
+```bash
+mem log list
+```
+
+This shows the entire project log in markdown format, making it easy to review investigations and decisions made so far.
+
 ### List Context/Artifacts
 
 List tracked content:

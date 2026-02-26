@@ -158,12 +158,13 @@ def "main log" [] {
     print "mem log - Manage project log
 
 USAGE:
-    mem log add [OPTIONS]
+    mem log <SUBCOMMAND>
 
 SUBCOMMANDS:
     add        Add an entry to the project log
+    list       Display all log entries
 
-OPTIONS:
+ADD OPTIONS:
     --title <string>         Short description (required)
     --found <string>         What was discovered
     --decided <string>       Decision made
@@ -171,22 +172,13 @@ OPTIONS:
     --commit <hash>          Override commit hash (default: current HEAD)
 
 EXAMPLES:
-    # Simple entry
+    # Add an entry
     mem log add --title \"Fixed parser bug\" \\
       --found \"Null pointer in edge case.\" \\
       --decided \"Added null check.\"
 
-    # With open questions
-    mem log add --title \"Performance investigation\" \\
-      --found \"Query takes 2s on large datasets.\" \\
-      --decided \"Add caching layer.\" \\
-      --open \"Need benchmark suite?\"
-
-    # Custom commit
-    mem log add --title \"Bug analysis\" \\
-      --found \"Root cause identified.\" \\
-      --decided \"Apply hotfix.\" \\
-      --commit abc1234
+    # List all entries
+    mem log list
 
 For more information, see: https://github.com/palekiwi-labs/mem
 "
@@ -202,6 +194,15 @@ def "main log add" [
 ] {
     try {
         log add --title=$title --found=$found --decided=$decided --open=$open --commit=$commit
+    } catch { |err|
+        errors pretty-print $err
+    }
+}
+
+# List all log entries
+def "main log list" [] {
+    try {
+        log list
     } catch { |err|
         errors pretty-print $err
     }

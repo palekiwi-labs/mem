@@ -110,3 +110,21 @@ def validate-commit [hash: string] {
         error make {msg: $"Invalid commit hash: ($hash)"}
     }
 }
+
+# List all log entries
+export def list [] {
+    # 1. Environment Checks
+    let branch = (git_utils check-environment)
+    
+    # 2. Path Construction
+    let base_dir = (git_utils get-mem-dir-for-branch $branch)
+    let log_path = ($base_dir | path join "spec" "log.md")
+    
+    # 3. Check if log file exists
+    if not ($log_path | path exists) {
+        error make {msg: "No log entries. Use 'mem log add' to create entries."}
+    }
+    
+    # 4. Print file content
+    open $log_path | print
+}
