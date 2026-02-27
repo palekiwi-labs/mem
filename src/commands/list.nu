@@ -8,18 +8,27 @@ use ../lib/config load
 
 export def main [
     --all(-a)              # List files for all branches
+    --branch(-b): string   # List files for a specific branch
     --depth: int = 0       # Limit depth (default: 0 = unlimited)
     --json(-j)             # Output in JSON format
     --include-ignored(-i)  # Include gitignored tmp/ and ref/ files
 ] {
     # 1. Environment Checks
     let current_branch = git_utils check-environment
-    let sanitized_branch = git_utils sanitize-branch-name $current_branch
+    
+    let target_branch = if $branch != null { $branch } else { $current_branch }
+    let sanitized_target = git_utils sanitize-branch-name $target_branch
+    
     let config = load
     
     # 2. Path Setup
     let git_root = git_utils get-git-root
     let mem_dir = $git_root | path join $config.dir_name
+    
+    # Check if target branch directory exists
+    if $branch != null and not ($mem_dir | path join $sanitized_target | path exists) {
+        error make {msg: $"No artifacts found for branch '($branch)'"}
+    }
 
     cd $mem_dir
     
@@ -29,7 +38,7 @@ export def main [
         $fd_flags = ($fd_flags | append [ "--no-ignore"])
     }
 
-    let search_path = if $all { ["."] } else { ["." $sanitized_branch] }
+    let search_path = if $all { ["."] } else { ["." $sanitized_target] }
 
     let files = run-external "fd" ...$search_path ...$fd_flags 
     | lines
@@ -52,7 +61,7 @@ export def main [
     let branches_to_query = if $all {
         $depth_filtered | get branch | uniq
     } else {
-        [$current_branch]
+        [$target_branch]
     }
     
     let enriched = enrich-with-commit-data $depth_filtered $branches_to_query

@@ -112,17 +112,25 @@ def validate-commit [hash: string] {
 }
 
 # List all log entries
-export def list [] {
+export def list [
+    --branch(-b): string         # List entries for a specific branch
+] {
     # 1. Environment Checks
-    let branch = (git_utils check-environment)
+    let current_branch = (git_utils check-environment)
+    let target_branch = if $branch != null { $branch } else { $current_branch }
     
     # 2. Path Construction
-    let base_dir = (git_utils get-mem-dir-for-branch $branch)
+    let base_dir = (git_utils get-mem-dir-for-branch $target_branch)
     let log_path = ($base_dir | path join "spec" "log.md")
     
     # 3. Check if log file exists
     if not ($log_path | path exists) {
-        error make {msg: "No log entries. Use 'mem log add' to create entries."}
+        let msg = if $branch != null {
+            $"No log entries for branch '($branch)'."
+        } else {
+            "No log entries. Use 'mem log add' to create entries."
+        }
+        error make {msg: $msg}
     }
     
     # 4. Print file content
