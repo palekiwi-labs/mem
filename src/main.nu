@@ -47,12 +47,13 @@ def "main add" [
 # List artifact files
 def "main list" [
     --all(-a)              # List files for all branches
+    --branch(-b): string   # List files for a specific branch
     --depth: int = 0       # Limit depth (default: 0 = unlimited)
     --json(-j)             # Output in JSON format
     --include-ignored(-i)  # Include gitignored tmp/ and ref/ files
 ] {
     try {
-        list --all=$all --depth=$depth --json=$json --include-ignored=$include_ignored
+        list --all=$all --branch=$branch --depth=$depth --json=$json --include-ignored=$include_ignored
     } catch { |err|
         errors pretty-print $err
     }
@@ -164,6 +165,9 @@ SUBCOMMANDS:
     add        Add an entry to the project log
     list       Display all log entries
 
+LIST OPTIONS:
+    --branch, -b <string>    List entries for a specific branch
+
 ADD OPTIONS:
     --title <string>         Short description (required)
     --found <string>         What was discovered
@@ -200,9 +204,11 @@ def "main log add" [
 }
 
 # List all log entries
-def "main log list" [] {
+def "main log list" [
+    --branch(-b): string         # List entries for a specific branch
+] {
     try {
-        log list
+        log list --branch=$branch
     } catch { |err|
         errors pretty-print $err
     }
@@ -302,10 +308,14 @@ EXAMPLES:
     mem ref add path:~/config.yaml         # Copy local file
     mem list                               # List files for current branch
     mem list --all                         # List files for all branches
+    mem list --branch dev                  # List files for specific branch
     mem list --include-ignored             # Include tmp/ and ref/ files
     mem list -ai --json                    # All branches, with ignored files, JSON output
     mem log add --title \"Fixed bug\" --found \"Root cause\" --decided \"Applied fix\"
+    mem log list                           # List log for current branch
+    mem log list --branch dev              # List log for specific branch
     mem prune                              # Delete tmp/ and ref/ for current branch
+
     mem prune --all                        # Delete for all branches (with confirmation)
     mem prune --force                      # Skip confirmation prompt
     mem prune -af                          # Delete for all branches, no confirmation
