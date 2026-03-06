@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Palekiwi Labs
 
+use ../lib/git_utils.nu
+
 # Add a new artifact file to the agent's storage
 #
 # Artifacts are categorized into directories within the branch-specific storage:
