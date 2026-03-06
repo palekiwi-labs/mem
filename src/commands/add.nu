@@ -1,18 +1,22 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Palekiwi Labs
 
-# Add a new artifact file
-
-use ../lib/git_utils.nu
-
+# Add a new artifact file to the agent's storage
+#
+# Artifacts are categorized into directories within the branch-specific storage:
+# - spec/ (default): Project specifications, requirements, and design docs.
+# - trace/: Execution traces, step-by-step logs of agent activity.
+# - tmp/: Temporary files, intermediate thoughts, or scratchpad data.
+# - ref/: Static reference materials, documentation, or code snippets.
+# - bin/: Executables, scripts, or binary artifacts.
 export def main [
-    filename: string       # Name of file to create
-    content?: string       # Content to write to file
-    --trace                # Save to trace/ directory
-    --tmp                  # Save to tmp/ directory
+    filename: string       # Name of file to create (e.g., 'plan.md')
+    content?: string       # Optional string content to write to the file
+    --trace                # Save to trace/ subdirectory (uses commit hash and timestamp)
+    --tmp                  # Save to tmp/ subdirectory (uses commit hash and timestamp)
     --ref                  # Save to ref/ directory
     --bin                  # Save to bin/ directory
-    --commit: string       # Specify commit hash (requires --trace or --tmp)
+    --commit: string       # Specify commit hash for trace/tmp (defaults to HEAD)
     --force(-f)            # Overwrite existing file
 ] {
     # 1. Environment Checks

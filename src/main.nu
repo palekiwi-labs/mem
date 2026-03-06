@@ -28,7 +28,7 @@ def "main init" [] {
 
 # Create a new artifact file
 def "main add" [
-    filename: string       # Name of file to create
+    filename?: string      # Name of file to create
     content?: string       # Content to write to file
     --trace                # Save to trace/ directory
     --tmp                  # Save to tmp/ directory
@@ -37,6 +37,10 @@ def "main add" [
     --commit: string       # Specify commit hash (requires --trace or --tmp)
     --force(-f)            # Overwrite existing file
 ] {
+    if ($filename == null) {
+        print_add_help
+        return
+    }
     try {
         add $filename $content --trace=$trace --tmp=$tmp --ref=$ref --bin=$bin --commit=$commit --force=$force
     } catch { |err|
@@ -232,6 +236,54 @@ def "main version" [] {
     }
 }
 
+def print_add_help [] {
+    print "mem add - Create a new artifact file
+
+USAGE:
+    mem add <filename> [content] [FLAGS]
+
+ARGS:
+    <filename>          Name of the file to create
+    [content]           Optional string content to write to the file
+
+FLAGS:
+    --trace             Save to the trace/ directory. Artifacts are placed in
+                        a subdirectory named after the current commit timestamp and hash.
+                        Useful for recording execution traces or logs.
+
+    --tmp               Save to the tmp/ directory. Similar to --trace, artifacts
+                        are placed in a commit-specific subdirectory.
+                        Useful for temporary data that shouldn't persist long-term.
+
+    --ref               Save to the ref/ directory. 
+                        Used for static reference materials.
+
+    --bin               Save to the bin/ directory.
+                        Used for binary artifacts or executables.
+
+    --commit <hash>     Specify a commit hash to use for the directory name.
+                        Requires --trace or --tmp. If not provided, the current 
+                        HEAD commit is used.
+
+    -f, --force         Overwrite the file if it already exists.
+
+DESCRIPTION:
+    By default, artifacts are saved to the spec/ directory for the current branch.
+    Using one of the category flags (--trace, --tmp, --ref, --bin) changes the 
+    target directory within the branch's artifact storage.
+
+EXAMPLES:
+    # Save a specification to spec/
+    mem add requirements.md \"Project requirements...\"
+
+    # Save an execution trace to trace/<timestamp>-<hash>/
+    mem add trace.json \"$(cat trace_output.json)\" --trace
+
+    # Save to a specific previous commit's trace directory
+    mem add log.txt \"Historical log\" --trace --commit abc1234
+"
+}
+
 # Show help message
 def "main help" [] {
     try {
@@ -256,7 +308,12 @@ def main [--version(-v)] {
 # Override built-in help to show custom help for main script
 # This intercepts the --help flag before Nushell's auto-generated help
 def help [...rest] {
-    print_help
+    let sub = ($rest | first | default "")
+    if $sub == "add" or $sub == "main add" {
+        print_add_help
+    } else {
+        print_help
+    }
 }
 
 def print_help [] {
