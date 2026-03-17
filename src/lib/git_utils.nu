@@ -53,11 +53,14 @@ export def ensure-worktree [] {
         # Change to worktree directory to create initial commit
         cd $mem_path
         
-        # Create initial commit with .gitignore
+        # Create initial commit with .gitignore and .rgignore
         let gitignore_content = "*/tmp/\n*/ref/\n"
         $gitignore_content | save --force .gitignore
         
-        git add .gitignore
+        let rgignore_content = "!*/tmp/\n!*/ref/\n"
+        $rgignore_content | save --force .rgignore
+        
+        git add .gitignore .rgignore
         git commit -m $"Initialize ($mem_branch_name) branch"
     }
 }
