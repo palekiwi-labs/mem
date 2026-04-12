@@ -26,9 +26,14 @@
             lockFile = ./Cargo.lock;
           };
 
-          nativeBuildInputs = [ rustToolchain ];
+          nativeBuildInputs = [ rustToolchain pkgs.pkg-config ];
 
-          buildInputs = [];
+          buildInputs = [
+            pkgs.openssl
+            pkgs.libssh2
+            pkgs.zlib
+            pkgs.libgit2
+          ];
 
           meta = with pkgs.lib; {
             description = "A new Rust project";
@@ -46,6 +51,12 @@
               pkgs.cargo-watch
               pkgs.cargo-edit
               pkgs.cargo-nextest
+              pkgs.pkg-config
+              pkgs.openssl
+              pkgs.libssh2
+              pkgs.zlib
+              pkgs.libgit2
+              pkgs.git
             ];
 
             shellHook = ''

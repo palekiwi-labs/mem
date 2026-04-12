@@ -7,7 +7,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.102"
 clap = { version = "4.6.0", features = ["derive"] }
-gix = { version = "0.81.0", features = ["blocking-network-client", "worktree-mutation"] }
+git2 = { version = "0.20.4", features = ["https", "ssh"] }
 
 [dev-dependencies]
 assert_cmd = "2.2.0"
