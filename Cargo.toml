@@ -13,3 +13,4 @@ gix = { version = "0.81.0", features = ["blocking-network-client", "worktree-mut
 assert_cmd = "2.2.0"
 predicates = "3.1.4"
 pretty_assertions = "1.4.1"
+tempfile = "3.27.0"

@@ -1567,6 +1567,7 @@ dependencies = [
  "gix",
  "predicates",
  "pretty_assertions",
+ "tempfile",
 ]
 
 [[package]]
