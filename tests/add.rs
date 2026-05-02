@@ -45,35 +45,50 @@ fn test_add_from_file() -> anyhow::Result<()> {
 }
 
 #[test]
-fn test_add_from_stdin() -> anyhow::Result<()> {
+fn test_add_clipboard_conflicts() -> anyhow::Result<()> {
     let temp = TempDir::new()?;
     helpers::setup_git_repo(temp.path());
 
-    // Initialize mem
+    // Conflict with inline content
     let mut cmd = Command::cargo_bin("mem")?;
     cmd.current_dir(temp.path())
-        .env("MEM_BRANCH_NAME", "test-mem")
-        .env("MEM_DIR_NAME", ".test-mem")
-        .arg("init");
-    cmd.assert().success();
-
-    // Add from stdin
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path())
-        .env("MEM_BRANCH_NAME", "test-mem")
-        .env("MEM_DIR_NAME", ".test-mem")
         .arg("add")
         .arg("index.md")
-        .write_stdin("content from stdin");
+        .arg("inline content")
+        .arg("--clipboard");
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
 
-    cmd.assert().success().stdout(predicate::str::contains(
-        "Created .test-mem/main/spec/index.md",
-    ));
+    // Conflict with --file
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .arg("add")
+        .arg("index.md")
+        .arg("--file")
+        .arg("some_file.txt")
+        .arg("--clipboard");
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
 
-    let file_path = temp.path().join(".test-mem/main/spec/index.md");
-    assert!(file_path.exists());
-    let content = fs::read_to_string(file_path)?;
-    assert_eq!(content, "content from stdin");
+    Ok(())
+}
+
+#[test]
+fn test_add_clipboard_unsupported_format() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .arg("add")
+        .arg("file.webp")
+        .arg("--clipboard");
+
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("Unsupported image format"));
 
     Ok(())
 }
