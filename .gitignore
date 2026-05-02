@@ -31,8 +31,3 @@ result
 .direnv
 .envrc
 .mem
-
-
-# Added by cargo
-
-/target
