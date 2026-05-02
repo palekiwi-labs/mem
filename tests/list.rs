@@ -44,6 +44,46 @@ fn test_list_not_a_git_repo() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_list_from_subdirectory() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    // 1. Initialize
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    // 2. Add a file
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("index.md")
+        .arg("content");
+    cmd.assert().success();
+
+    // 3. Create a subdirectory and run list from there
+    let sub = temp.path().join("src/nested");
+    std::fs::create_dir_all(&sub)?;
+
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(&sub)
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("list");
+
+    let output = String::from_utf8(cmd.assert().success().get_output().stdout.clone())?;
+    // Path should still be relative to git root, NOT to the subdirectory
+    assert_eq!(output.trim(), ".test-mem/main/spec/index.md");
+
+    Ok(())
+}
+
+#[test]
 fn test_list_ignores_shallow_paths() -> anyhow::Result<()> {
     let temp = TempDir::new()?;
     helpers::setup_git_repo(temp.path());
