@@ -42,9 +42,8 @@ pub fn handle(
     }
 
     // 5. Determine scan directory/directories
-    let mut paths = Vec::new();
-    if all {
-        collect_files(&mem_path, &mut paths)?;
+    let mut paths = if all {
+        collect_files(&mem_path)?
     } else {
         let branch = if let Some(b) = branch_name {
             b
@@ -55,9 +54,11 @@ pub fn handle(
         let scan_dir = mem_path.join(&branch_dir);
 
         if scan_dir.exists() {
-            collect_files(&scan_dir, &mut paths)?;
+            collect_files(&scan_dir)?
+        } else {
+            Vec::new()
         }
-    }
+    };
 
     // 7. Sort
     paths.sort();
@@ -131,17 +132,20 @@ pub fn handle(
     Ok(())
 }
 
-fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
-    if dir.is_dir() {
-        for entry in fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                collect_files(&path, files)?;
-            } else {
-                files.push(path);
-            }
-        }
+fn collect_files(dir: &Path) -> Result<Vec<PathBuf>> {
+    if !dir.is_dir() {
+        return Ok(vec![]);
     }
-    Ok(())
+
+    fs::read_dir(dir)?
+        .map(|entry| -> Result<Vec<PathBuf>> {
+            let path = entry?.path();
+            if path.is_dir() {
+                collect_files(&path)
+            } else {
+                Ok(vec![path])
+            }
+        })
+        .collect::<Result<Vec<_>>>()
+        .map(|v| v.into_iter().flatten().collect())
 }
