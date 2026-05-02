@@ -125,3 +125,10 @@ pub fn get_current_branch(cwd: &Path) -> anyhow::Result<String> {
 pub fn get_short_head_hash(cwd: &Path) -> anyhow::Result<String> {
     run_git(["rev-parse", "--short", "HEAD"], cwd)
 }
+
+pub fn get_head_timestamp(cwd: &Path) -> anyhow::Result<u64> {
+    let output = run_git(["log", "-1", "--format=%ct", "HEAD"], cwd)?;
+    output
+        .parse::<u64>()
+        .with_context(|| format!("Failed to parse commit timestamp: '{}'", output))
+}

@@ -4,7 +4,6 @@ use crate::git;
 use anyhow::{bail, Context, Result};
 use std::fs;
 use std::path::{Component, Path};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn handle(
     cwd: &Path,
@@ -41,10 +40,7 @@ pub fn handle(
         MemType::Spec => mem_path.join(&branch_dir).join("spec"),
         MemType::Ref => mem_path.join(&branch_dir).join("ref"),
         MemType::Trace | MemType::Tmp => {
-            let ts = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .context("System time is before Unix epoch")?
-                .as_secs();
+            let ts = git::get_head_timestamp(&root)?;
             let hash = git::get_short_head_hash(&root)
                 .context("Could not determine HEAD hash. Have you made your first commit yet?")?;
             let type_dir = if matches!(mem_type, MemType::Trace) {
