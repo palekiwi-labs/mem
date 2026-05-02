@@ -1,4 +1,4 @@
-use anyhow::{Context, anyhow};
+use anyhow::{anyhow, Context};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::Command;

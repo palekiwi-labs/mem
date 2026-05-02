@@ -64,7 +64,6 @@ fn test_add_from_stdin() -> anyhow::Result<()> {
         .env("MEM_DIR_NAME", ".test-mem")
         .arg("add")
         .arg("index.md")
-        .arg("-")
         .write_stdin("content from stdin");
 
     cmd.assert().success().stdout(predicate::str::contains(
@@ -153,7 +152,8 @@ fn test_add_no_content_empty_file() -> anyhow::Result<()> {
         .env("MEM_BRANCH_NAME", "test-mem")
         .env("MEM_DIR_NAME", ".test-mem")
         .arg("add")
-        .arg("empty.txt");
+        .arg("empty.txt")
+        .arg("");
 
     cmd.assert().success().stdout(predicate::str::contains(
         "Created .test-mem/main/spec/empty.txt",

@@ -26,7 +26,8 @@ fn main() -> anyhow::Result<()> {
         } => {
             let resolved_content: Vec<u8> = if let Some(path) = file {
                 std::fs::read(&path).with_context(|| format!("Failed to read file {}", path))?
-            } else if let Some(c) = content {
+            } else {
+                let c = content.unwrap_or_else(|| "-".to_string());
                 if c == "-" {
                     let mut buf = Vec::new();
                     io::stdin()
@@ -36,8 +37,6 @@ fn main() -> anyhow::Result<()> {
                 } else {
                     c.into_bytes()
                 }
-            } else {
-                Vec::new()
             };
 
             commands::add::handle(&cwd, &filename, resolved_content, mem_type, force)?;
