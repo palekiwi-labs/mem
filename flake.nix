@@ -26,7 +26,7 @@
             lockFile = ./Cargo.lock;
           };
 
-          nativeBuildInputs = [ rustToolchain ];
+          nativeBuildInputs = [ rustToolchain pkgs.git ];
 
           buildInputs = [];
 
@@ -41,6 +41,7 @@
           {
             buildInputs = [
               rustToolchain
+              pkgs.git
               pkgs.rust-analyzer
               pkgs.cargo-expand
               pkgs.cargo-watch
