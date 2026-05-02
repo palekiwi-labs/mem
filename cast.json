@@ -1,5 +1,5 @@
 {
-  "opencode_command": ["nix", "develop", "-c", "opencode"],
+  "use_flake": true,
   "pids_limit": 512,
   "extra_data_volumes": {
     "cargo": {
