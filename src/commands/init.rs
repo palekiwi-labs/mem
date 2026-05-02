@@ -6,7 +6,7 @@ use std::path::Path;
 
 pub fn handle(cwd: &Path) -> Result<()> {
     // 1. Verify git repo
-    git::run_git(&["rev-parse", "--git-dir"], cwd).context("Not in a git repository")?;
+    git::run_git(["rev-parse", "--git-dir"], cwd).context("Not in a git repository")?;
 
     // 2. Get git root
     let root = git::get_git_root(cwd)?;
@@ -28,14 +28,12 @@ pub fn handle(cwd: &Path) -> Result<()> {
 
     // 6. Check if worktree exists but dir is missing
     let worktrees = git::list_worktrees(&root)?;
-    if worktrees.contains(&mem_path) {
-        if !mem_path.exists() {
-            anyhow::bail!(
-                "worktree for {} exists at {:?} but directory is missing",
-                config.dir_name,
-                mem_path
-            );
-        }
+    if worktrees.contains(&mem_path) && !mem_path.exists() {
+        anyhow::bail!(
+            "worktree for {} exists at {:?} but directory is missing",
+            config.dir_name,
+            mem_path
+        );
     }
 
     // 7. Ensure worktree
