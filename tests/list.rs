@@ -44,6 +44,49 @@ fn test_list_not_a_git_repo() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_list_ignores_shallow_paths() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    // 1. Initialize
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    // 2. Create a file directly under the branch dir (invalid depth)
+    let branch_dir = temp.path().join(".test-mem/main");
+    std::fs::create_dir_all(&branch_dir)?;
+    let invalid_file = branch_dir.join("README.md");
+    std::fs::write(invalid_file, "invalid")?;
+
+    // 3. Add a valid file
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("index.md")
+        .arg("content");
+    cmd.assert().success();
+
+    // 4. List
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("list");
+
+    let output = String::from_utf8(cmd.assert().success().get_output().stdout.clone())?;
+    assert!(output.contains("index.md"));
+    assert!(!output.contains("README.md"));
+
+    Ok(())
+}
+
+#[test]
 fn test_list_excludes_tmp_and_ref() -> anyhow::Result<()> {
     let temp = TempDir::new()?;
     helpers::setup_git_repo(temp.path());

@@ -72,13 +72,15 @@ pub fn handle(
     // 8. Process files
     let mut mem_files = Vec::new();
     for path in paths {
-        let rel_to_mem = path.strip_prefix(&mem_path).unwrap_or(&path);
+        let Ok(rel_to_mem) = path.strip_prefix(&mem_path) else {
+            continue;
+        };
         let components: Vec<_> = rel_to_mem
             .components()
             .map(|c| c.as_os_str().to_string_lossy().to_string())
             .collect();
 
-        if components.len() < 2 {
+        if components.len() < 3 {
             continue;
         }
 
