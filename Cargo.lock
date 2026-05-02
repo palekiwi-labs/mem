@@ -806,6 +806,7 @@ dependencies = [
  "predicates",
  "pretty_assertions",
  "serde",
+ "serde_json",
  "tempfile",
 ]
 
