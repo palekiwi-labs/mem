@@ -113,13 +113,12 @@ pub fn handle(
         // Trace/Tmp handling for hash/timestamp
         if (category == "trace" || category == "tmp") && components.len() >= 4 {
             let ts_hash_dir = &components[2];
-            if let Some((ts_str, hash_str)) = ts_hash_dir.split_once('-') {
-                if let Ok(ts) = ts_str.parse::<u64>() {
+            if let Some((ts_str, hash_str)) = ts_hash_dir.split_once('-')
+                && let Ok(ts) = ts_str.parse::<u64>() {
                     mem_file.commit_timestamp = ts;
                     mem_file.hash = Some(hash_str.to_string());
                     mem_file.commit_hash = Some(hash_str.to_string());
                 }
-            }
         }
 
         mem_files.push(mem_file);
