@@ -287,7 +287,7 @@ fn test_list_json_spec() -> anyhow::Result<()> {
     assert_eq!(item["branch"], "main"); // default git branch in setup_git_repo is main
     assert!(item["hash"].is_null());
     assert!(item["commit_hash"].is_null());
-    assert_eq!(item["commit_timestamp"], 0);
+    assert!(item["commit_timestamp"].is_null());
 
     Ok(())
 }

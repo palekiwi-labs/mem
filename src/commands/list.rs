@@ -13,7 +13,8 @@ struct MemFile {
     category: String,
     hash: Option<String>,
     commit_hash: Option<String>,
-    commit_timestamp: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    commit_timestamp: Option<u64>,
 }
 
 pub fn handle(
@@ -109,7 +110,7 @@ pub fn handle(
             category: category.clone(),
             hash: None,
             commit_hash: None,
-            commit_timestamp: 0,
+            commit_timestamp: None,
         };
 
         // Trace/Tmp handling for hash/timestamp
@@ -117,7 +118,7 @@ pub fn handle(
             let ts_hash_dir = &components[2];
             if let Some((ts_str, hash_str)) = ts_hash_dir.split_once('-')
                 && let Ok(ts) = ts_str.parse::<u64>() {
-                    mem_file.commit_timestamp = ts;
+                    mem_file.commit_timestamp = Some(ts);
                     mem_file.hash = Some(hash_str.to_string());
                     mem_file.commit_hash = Some(hash_str.to_string());
                 }
