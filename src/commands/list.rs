@@ -35,7 +35,7 @@ pub fn handle(
 
     // 4. Check if .mem exists
     let mem_path = root.join(&config.dir_name);
-    if !mem_path.exists() {
+    if !mem_path.is_dir() {
         anyhow::bail!(
             "{} directory does not exist. Run `mem init` first.",
             config.dir_name
@@ -58,13 +58,6 @@ pub fn handle(
         if scan_dir.exists() {
             collect_files(&scan_dir, &mut paths)?;
         }
-    }
-
-    if paths.is_empty() {
-        if json {
-            println!("[]");
-        }
-        return Ok(());
     }
 
     // 7. Sort
