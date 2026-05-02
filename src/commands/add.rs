@@ -1,7 +1,7 @@
 use crate::cli::MemType;
 use crate::config::Config;
 use crate::git;
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use std::fs;
 use std::path::{Component, Path};
 
@@ -80,7 +80,8 @@ pub fn handle(
 
     // 11. Print confirmation
     let rel_path = file_path.strip_prefix(&root).unwrap_or(&file_path);
-    println!("✓ Created {}", rel_path.to_string_lossy());
+    eprintln!("✓ Created");
+    println!("{}", rel_path.to_string_lossy());
 
     Ok(())
 }
