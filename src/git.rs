@@ -132,3 +132,8 @@ pub fn get_head_timestamp(cwd: &Path) -> anyhow::Result<u64> {
         .parse::<u64>()
         .with_context(|| format!("Failed to parse commit timestamp: '{}'", output))
 }
+
+pub fn is_working_tree_dirty(cwd: &Path) -> anyhow::Result<bool> {
+    let output = run_git(["status", "--porcelain"], cwd)?;
+    Ok(!output.trim().is_empty())
+}
