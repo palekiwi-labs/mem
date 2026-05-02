@@ -31,10 +31,12 @@ pub fn handle(cwd: &Path, branch_name: Option<String>) -> Result<()> {
 
     let log_file_path = mem_path.join(&branch_dir).join("spec").join("log.md");
 
-    if log_file_path.exists() {
-        let content = fs::read_to_string(&log_file_path)
-            .with_context(|| format!("Failed to read {}", log_file_path.display()))?;
-        print!("{}", content);
+    match fs::read_to_string(&log_file_path) {
+        Ok(content) => print!("{}", content),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {} // Silently exit
+        Err(e) => {
+            return Err(e).with_context(|| format!("Failed to read {}", log_file_path.display()))
+        }
     }
 
     Ok(())
