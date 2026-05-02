@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::git;
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -79,11 +79,23 @@ pub fn handle(
 
     let log_file_path = mem_path.join(&branch_dir).join("spec").join("log.md");
 
+    // 6. Open file and get metadata (to check if it's new) before building markdown
+    if let Some(parent) = log_file_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_file_path)
+        .with_context(|| format!("Failed to open {}", log_file_path.display()))?;
+
+    let is_new = file.metadata()?.len() == 0;
+
     // 5. Build Markdown
     let mut md = String::new();
 
     // If file doesn't exist, start with header
-    let is_new = !log_file_path.exists();
     if is_new {
         md.push_str("# Project Log\n\n");
     }
@@ -132,17 +144,7 @@ pub fn handle(
         }
     }
 
-    // 6. Append to file
-    if let Some(parent) = log_file_path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_file_path)
-        .with_context(|| format!("Failed to open {}", log_file_path.display()))?;
-
+    // 7. Append to file
     file.write_all(md.as_bytes())
         .with_context(|| format!("Failed to write to {}", log_file_path.display()))?;
 
