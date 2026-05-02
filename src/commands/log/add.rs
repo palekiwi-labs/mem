@@ -124,9 +124,12 @@ pub fn handle(
     };
 
     // Add an extra newline before bullets if we are going to add bullets
-    let has_bullets = (!entry.found.is_empty() && entry.found.iter().any(|i| !i.trim().is_empty()))
-        || (!entry.decided.is_empty() && entry.decided.iter().any(|i| !i.trim().is_empty()))
-        || (!entry.open.is_empty() && entry.open.iter().any(|i| !i.trim().is_empty()));
+    let has_bullets = entry
+        .found
+        .iter()
+        .chain(entry.decided.iter())
+        .chain(entry.open.iter())
+        .any(|i| !i.trim().is_empty());
 
     if has_bullets {
         md.push('\n');
