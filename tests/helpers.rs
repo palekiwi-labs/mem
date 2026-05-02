@@ -3,7 +3,7 @@ use std::process::Command;
 
 pub fn setup_git_repo(dir: &Path) {
     Command::new("git")
-        .arg("init")
+        .args(["init", "-b", "main"])
         .current_dir(dir)
         .output()
         .expect("Failed to init git repo");

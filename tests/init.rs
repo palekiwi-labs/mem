@@ -2,7 +2,6 @@ mod helpers;
 
 use assert_cmd::Command;
 use predicates::prelude::*;
-use std::fs;
 use tempfile::TempDir;
 
 #[test]
@@ -75,9 +74,9 @@ fn test_init_local_branch_exists() -> anyhow::Result<()> {
     helpers::setup_git_repo(temp.path());
 
     // Create a local branch but don't leave it checked out in a worktree
-    // Note: In a fresh repo, master is checked out.
+    // Note: In a fresh repo, main is checked out.
     // If we create test-mem, it becomes the new branch.
-    // We should create it and then switch back to master.
+    // We should create it and then switch back to main.
     std::process::Command::new("git")
         .args(["branch", "test-mem"])
         .current_dir(temp.path())
@@ -118,7 +117,7 @@ fn test_init_remote_branch_exists() -> anyhow::Result<()> {
 
     // Delete local branch to simulate "remote only"
     std::process::Command::new("git")
-        .args(["checkout", "master"])
+        .args(["checkout", "main"])
         .current_dir(temp_local.path())
         .output()?;
 
