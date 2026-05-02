@@ -20,6 +20,7 @@ pub enum Commands {
     /// Initialize agent artifacts directory structure
     Init,
     /// Add a new artifact
+    #[command(arg_required_else_help = true)]
     Add {
         /// Name of the artifact file
         filename: String,
