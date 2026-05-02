@@ -491,6 +491,54 @@ fn test_list_all_branches() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_list_all_with_slashed_branch() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    // 1. Initialize
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    // 2. Add file to a branch with a slash
+    std::process::Command::new("git")
+        .args(["checkout", "-b", "feat/slash"])
+        .current_dir(temp.path())
+        .output()?;
+
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("test.md")
+        .arg("content");
+    cmd.assert().success();
+
+    // 3. List --all --json
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("list")
+        .arg("--all")
+        .arg("--json");
+
+    let output = String::from_utf8(cmd.assert().success().get_output().stdout.clone())?;
+    let json: serde_json::Value = serde_json::from_str(&output)?;
+
+    let arr = json.as_array().unwrap();
+    // Should have "feat-slash" as branch name in JSON because we replace slashes for dir names
+    let item = arr.iter().find(|i| i["name"] == "test.md").unwrap();
+    assert_eq!(item["branch"], "feat-slash");
+
+    Ok(())
+}
+
+#[test]
 fn test_list_not_initialized() -> anyhow::Result<()> {
     let temp = TempDir::new()?;
     helpers::setup_git_repo(temp.path());
