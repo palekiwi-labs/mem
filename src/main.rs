@@ -52,6 +52,9 @@ fn main() -> anyhow::Result<()> {
         } => {
             commands::list::handle(&cwd, branch, all, include_gitignored, json)?;
         }
+        Commands::Log { command } => {
+            commands::log::handle(&cwd, command)?;
+        }
     }
 
     Ok(())
