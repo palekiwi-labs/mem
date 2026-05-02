@@ -15,6 +15,14 @@ fn main() -> anyhow::Result<()> {
         Commands::Init => {
             commands::init::handle(&cwd)?;
         }
+        Commands::Add {
+            filename,
+            content,
+            mem_type,
+            force,
+        } => {
+            commands::add::handle(&cwd, &filename, content, mem_type, force)?;
+        }
     }
 
     Ok(())

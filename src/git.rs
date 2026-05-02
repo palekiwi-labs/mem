@@ -117,3 +117,11 @@ pub fn git_commit(cwd: &Path, msg: &str) -> anyhow::Result<()> {
     run_git(["commit", "-m", msg], cwd)?;
     Ok(())
 }
+
+pub fn get_current_branch(cwd: &Path) -> anyhow::Result<String> {
+    run_git(["rev-parse", "--abbrev-ref", "HEAD"], cwd)
+}
+
+pub fn get_short_head_hash(cwd: &Path) -> anyhow::Result<String> {
+    run_git(["rev-parse", "--short", "HEAD"], cwd)
+}
