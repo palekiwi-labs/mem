@@ -32,8 +32,8 @@ fn test_add_from_file() -> anyhow::Result<()> {
         .arg("--file")
         .arg(&source_file);
 
-    cmd.assert().success().stdout(predicate::str::contains(
-        "Created .test-mem/main/spec/index.md",
+    cmd.assert().success().stdout(predicate::str::diff(
+        ".test-mem/main/spec/index.md\n",
     ));
 
     let file_path = temp.path().join(".test-mem/main/spec/index.md");
@@ -136,8 +136,8 @@ fn test_add_spec_default() -> anyhow::Result<()> {
         .arg("index.md")
         .arg("Project scope");
 
-    cmd.assert().success().stdout(predicate::str::contains(
-        "Created .test-mem/main/spec/index.md",
+    cmd.assert().success().stdout(predicate::str::diff(
+        ".test-mem/main/spec/index.md\n",
     ));
 
     let file_path = temp.path().join(".test-mem/main/spec/index.md");
@@ -170,8 +170,8 @@ fn test_add_no_content_empty_file() -> anyhow::Result<()> {
         .arg("empty.txt")
         .arg("");
 
-    cmd.assert().success().stdout(predicate::str::contains(
-        "Created .test-mem/main/spec/empty.txt",
+    cmd.assert().success().stdout(predicate::str::diff(
+        ".test-mem/main/spec/empty.txt\n",
     ));
 
     let file_path = temp.path().join(".test-mem/main/spec/empty.txt");
@@ -208,7 +208,7 @@ fn test_add_type_trace() -> anyhow::Result<()> {
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("Created .test-mem/main/trace/"));
+        .stdout(predicate::str::starts_with(".test-mem/main/trace/"));
 
     // Check if file exists under some timestamped dir
     let trace_base = temp.path().join(".test-mem/main/trace");
@@ -256,7 +256,7 @@ fn test_add_type_tmp() -> anyhow::Result<()> {
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("Created .test-mem/main/tmp/"));
+        .stdout(predicate::str::starts_with(".test-mem/main/tmp/"));
 
     let tmp_base = temp.path().join(".test-mem/main/tmp");
     let entries = fs::read_dir(tmp_base)?;
@@ -301,8 +301,8 @@ fn test_add_type_ref() -> anyhow::Result<()> {
         .arg("doc.md")
         .arg("ref content");
 
-    cmd.assert().success().stdout(predicate::str::contains(
-        "Created .test-mem/main/ref/doc.md",
+    cmd.assert().success().stdout(predicate::str::diff(
+        ".test-mem/main/ref/doc.md\n",
     ));
 
     let file_path = temp.path().join(".test-mem/main/ref/doc.md");
@@ -392,8 +392,8 @@ fn test_add_with_slashed_branch_name() -> anyhow::Result<()> {
         .arg("content");
 
     // We expect it to be in .test-mem/feature-logic/spec/test.md (NOT feature/logic)
-    cmd.assert().success().stdout(predicate::str::contains(
-        "Created .test-mem/feature-logic/spec/test.md",
+    cmd.assert().success().stdout(predicate::str::diff(
+        ".test-mem/feature-logic/spec/test.md\n",
     ));
 
     let file_path = temp.path().join(".test-mem/feature-logic/spec/test.md");

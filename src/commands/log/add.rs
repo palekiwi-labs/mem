@@ -141,7 +141,8 @@ pub fn handle(
         .with_context(|| format!("Failed to write to {}", log_file_path.display()))?;
 
     let rel_path = log_file_path.strip_prefix(&root).unwrap_or(&log_file_path);
-    println!("✓ Logged to {}", rel_path.display());
+    eprintln!("✓ Logged");
+    println!("{}", rel_path.display());
 
     Ok(())
 }

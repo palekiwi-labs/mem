@@ -28,8 +28,8 @@ fn test_log_add_basic() -> anyhow::Result<()> {
         .arg("--title")
         .arg("Test Title");
 
-    cmd.assert().success().stdout(predicate::str::contains(
-        "✓ Logged to .test-mem/main/spec/log.md",
+    cmd.assert().success().stdout(predicate::str::diff(
+        ".test-mem/main/spec/log.md\n",
     ));
 
     let log_path = temp.path().join(".test-mem/main/spec/log.md");
