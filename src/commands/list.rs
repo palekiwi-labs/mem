@@ -162,12 +162,12 @@ fn to_mem_file(path: &Path, mem_path: &Path, root: &Path) -> Option<MemFile> {
         comps.next(); // category
         if let Some(ts_hash_dir) = comps.next() {
             let ts_hash_str = ts_hash_dir.as_os_str().to_string_lossy();
-            if let Some((ts_str, hash_str)) = ts_hash_str.split_once('-') {
-                if let Ok(ts) = ts_str.parse::<u64>() {
-                    mem_file.commit_timestamp = ts;
-                    mem_file.hash = Some(hash_str.to_string());
-                    mem_file.commit_hash = Some(hash_str.to_string());
-                }
+            if let Some((ts_str, hash_str)) = ts_hash_str.split_once('-')
+                && let Ok(ts) = ts_str.parse::<u64>()
+            {
+                mem_file.commit_timestamp = ts;
+                mem_file.hash = Some(hash_str.to_string());
+                mem_file.commit_hash = Some(hash_str.to_string());
             }
         }
     }

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -131,4 +131,9 @@ pub fn get_head_timestamp(cwd: &Path) -> anyhow::Result<u64> {
     output
         .parse::<u64>()
         .with_context(|| format!("Failed to parse commit timestamp: '{}'", output))
+}
+
+pub fn is_working_tree_dirty(cwd: &Path) -> anyhow::Result<bool> {
+    let output = run_git(["status", "--porcelain"], cwd)?;
+    Ok(!output.trim().is_empty())
 }

@@ -55,4 +55,40 @@ pub enum Commands {
         #[arg(short = 'j', long)]
         json: bool,
     },
+    /// Manage project log (add entries)
+    Log {
+        #[command(subcommand)]
+        command: LogCommands,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum LogCommands {
+    /// Add a new log entry
+    Add {
+        /// Entry title (required unless --file is used)
+        #[arg(long)]
+        title: Option<String>,
+        /// Entry body text
+        #[arg(long)]
+        body: Option<String>,
+        /// Findings (can be repeated)
+        #[arg(long)]
+        found: Vec<String>,
+        /// Decisions (can be repeated)
+        #[arg(long)]
+        decided: Vec<String>,
+        /// Open questions (can be repeated)
+        #[arg(long)]
+        open: Vec<String>,
+        /// Read entry data from a JSON file
+        #[arg(short = 'f', long, conflicts_with_all = &["title", "body", "found", "decided", "open"])]
+        file: Option<String>,
+    },
+    /// List log entries
+    List {
+        /// List log for a specific branch instead of current
+        #[arg(long)]
+        branch: Option<String>,
+    },
 }
