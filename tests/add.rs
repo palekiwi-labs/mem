@@ -6,6 +6,101 @@ use std::fs;
 use tempfile::TempDir;
 
 #[test]
+fn test_add_from_file() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    // Initialize mem
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    // Create a temporary file
+    let source_file = temp.path().join("source.txt");
+    fs::write(&source_file, "content from file")?;
+
+    // Add from file
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("index.md")
+        .arg("--file")
+        .arg(&source_file);
+
+    cmd.assert().success().stdout(predicate::str::contains(
+        "Created .test-mem/main/spec/index.md",
+    ));
+
+    let file_path = temp.path().join(".test-mem/main/spec/index.md");
+    assert!(file_path.exists());
+    let content = fs::read_to_string(file_path)?;
+    assert_eq!(content, "content from file");
+
+    Ok(())
+}
+
+#[test]
+fn test_add_from_stdin() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    // Initialize mem
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    // Add from stdin
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("index.md")
+        .arg("-")
+        .write_stdin("content from stdin");
+
+    cmd.assert().success().stdout(predicate::str::contains(
+        "Created .test-mem/main/spec/index.md",
+    ));
+
+    let file_path = temp.path().join(".test-mem/main/spec/index.md");
+    assert!(file_path.exists());
+    let content = fs::read_to_string(file_path)?;
+    assert_eq!(content, "content from stdin");
+
+    Ok(())
+}
+
+#[test]
+fn test_add_conflict_file_and_inline() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .arg("add")
+        .arg("index.md")
+        .arg("inline content")
+        .arg("--file")
+        .arg("some_file.txt");
+
+    // clap should reject this
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+
+    Ok(())
+}
+
+#[test]
 fn test_add_spec_default() -> anyhow::Result<()> {
     let temp = TempDir::new()?;
     helpers::setup_git_repo(temp.path());

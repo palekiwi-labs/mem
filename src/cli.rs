@@ -24,8 +24,12 @@ pub enum Commands {
     Add {
         /// Name of the artifact file
         filename: String,
-        /// Initial content for the file
+        /// Initial content for the file (use "-" to read from stdin)
+        #[arg(conflicts_with = "file")]
         content: Option<String>,
+        /// Read content from a file (recommended for AI agents to avoid escaping)
+        #[arg(short = 'f', long = "file", conflicts_with = "content")]
+        file: Option<String>,
         /// Type of artifact
         #[arg(short = 't', long = "type", value_enum, default_value = "spec")]
         mem_type: MemType,

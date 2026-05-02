@@ -1,7 +1,7 @@
 use crate::cli::MemType;
 use crate::config::Config;
 use crate::git;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::fs;
 use std::path::{Component, Path};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -9,7 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub fn handle(
     cwd: &Path,
     filename: &str,
-    content: Option<String>,
+    content: Vec<u8>,
     mem_type: MemType,
     force: bool,
 ) -> Result<()> {
@@ -79,7 +79,7 @@ pub fn handle(
     }
 
     // 10. Write file
-    fs::write(&file_path, content.unwrap_or_default())
+    fs::write(&file_path, content)
         .with_context(|| format!("Failed to write to {}", file_path.display()))?;
 
     // 11. Print confirmation
