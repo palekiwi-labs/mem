@@ -2,6 +2,7 @@ use crate::config::Config;
 use crate::git;
 use anyhow::{bail, Context, Result};
 use serde::Deserialize;
+use std::fmt::Write as _;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::Path;
@@ -100,14 +101,12 @@ pub fn handle(
         md.push_str("# Project Log\n\n");
     }
 
-    md.push_str(&format!("## [{}] {}\n", hash, entry.title.trim()));
+    writeln!(&mut md, "## [{}] {}", hash, entry.title.trim()).unwrap();
 
     if let Some(b) = &entry.body {
         let b = b.trim();
         if !b.is_empty() {
-            md.push('\n');
-            md.push_str(b);
-            md.push('\n');
+            writeln!(&mut md, "\n{}", b).unwrap();
         }
     }
 
@@ -115,10 +114,7 @@ pub fn handle(
         for item in items {
             let item = item.trim();
             if !item.is_empty() {
-                if !md.ends_with('\n') {
-                    md.push('\n');
-                }
-                md.push_str(&format!("- **{}:** {}", label, item));
+                writeln!(md, "- **{}:** {}", label, item).unwrap();
             }
         }
     };
@@ -132,20 +128,13 @@ pub fn handle(
         .any(|i| !i.trim().is_empty());
 
     if has_bullets {
-        md.push('\n');
+        writeln!(&mut md).unwrap(); // Add space before bullets
         push_bullets("Found", &entry.found, &mut md);
         push_bullets("Decided", &entry.decided, &mut md);
         push_bullets("Open", &entry.open, &mut md);
     }
 
-    // Ensure double newline at the end
-    if !md.ends_with("\n\n") {
-        if md.ends_with('\n') {
-            md.push('\n');
-        } else {
-            md.push_str("\n\n");
-        }
-    }
+    writeln!(&mut md).unwrap(); // Ensure final separation newline
 
     // 7. Append to file
     file.write_all(md.as_bytes())
