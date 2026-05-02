@@ -42,95 +42,137 @@ pub fn handle(
     }
 
     // 5. Determine scan directory/directories
-    let mut paths = if all {
-        collect_files(&mem_path)?
+    let mut paths = resolve_scan_paths(&root, &mem_path, all, branch_name)?;
+
+    // 6. Sort
+    paths.sort();
+
+    // 7. Filter
+    let valid_paths = paths
+        .into_iter()
+        .filter(|path| is_valid_mem_file(path, &mem_path, include_gitignored));
+
+    // 8. Process files and Output
+    if !json {
+        for path in valid_paths {
+            let rel_path = path.strip_prefix(&root).unwrap_or(&path);
+            println!("{}", rel_path.display());
+        }
+    } else {
+        let mem_files: Vec<MemFile> = valid_paths
+            .filter_map(|path| to_mem_file(&path, &mem_path, &root))
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&mem_files)?);
+    }
+
+    Ok(())
+}
+
+fn resolve_scan_paths(
+    root: &Path,
+    mem_path: &Path,
+    all: bool,
+    branch_name: Option<String>,
+) -> Result<Vec<PathBuf>> {
+    if all {
+        collect_files(mem_path)
     } else {
         let branch = if let Some(b) = branch_name {
             b
         } else {
-            git::get_current_branch(&root)?
+            git::get_current_branch(root)?
         };
         let branch_dir = branch.replace(['/', '\\'], "-");
         let scan_dir = mem_path.join(&branch_dir);
 
         if scan_dir.exists() {
-            collect_files(&scan_dir)?
+            collect_files(&scan_dir)
         } else {
-            Vec::new()
+            Ok(Vec::new())
         }
+    }
+}
+
+fn is_valid_mem_file(path: &Path, mem_path: &Path, include_gitignored: bool) -> bool {
+    let Ok(rel_to_mem) = path.strip_prefix(mem_path) else {
+        return false;
+    };
+    let mut components = rel_to_mem.components();
+
+    let _branch = components.next();
+    let Some(category_comp) = components.next() else {
+        return false;
+    };
+    let Some(_name_comp) = components.next() else {
+        return false; // Ensures len >= 3
     };
 
-    // 7. Sort
-    paths.sort();
-
-    // 8. Process files
-    let mut mem_files = Vec::new();
-    for path in paths {
-        let Ok(rel_to_mem) = path.strip_prefix(&mem_path) else {
-            continue;
-        };
-        let components: Vec<_> = rel_to_mem
-            .components()
-            .map(|c| c.as_os_str().to_string_lossy().to_string())
-            .collect();
-
-        if components.len() < 3 {
-            continue;
+    if !include_gitignored {
+        let category = category_comp.as_os_str().to_string_lossy();
+        if category == "tmp" || category == "ref" {
+            return false;
         }
+    }
 
-        let branch = &components[0];
-        let category = &components[1];
+    true
+}
 
-        if !include_gitignored && (category == "tmp" || category == "ref") {
-            continue;
-        }
+fn to_mem_file(path: &Path, mem_path: &Path, root: &Path) -> Option<MemFile> {
+    let rel_to_mem = path.strip_prefix(mem_path).ok()?;
+    let mut components = rel_to_mem.components();
 
-        let rel_path = path
-            .strip_prefix(&root)
-            .unwrap_or(&path)
-            .to_string_lossy()
-            .to_string();
+    let branch = components
+        .next()?
+        .as_os_str()
+        .to_string_lossy()
+        .into_owned();
+    let category = components
+        .next()?
+        .as_os_str()
+        .to_string_lossy()
+        .into_owned();
 
-        if !json {
-            println!("{}", rel_path);
-            continue;
-        }
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
 
-        let name = path
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_default();
+    let rel_path = path
+        .strip_prefix(root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .to_string();
 
-        let mut mem_file = MemFile {
-            path: rel_path,
-            name,
-            branch: branch.clone(),
-            category: category.clone(),
-            hash: None,
-            commit_hash: None,
-            commit_timestamp: 0,
-        };
+    let mut mem_file = MemFile {
+        path: rel_path,
+        name,
+        branch,
+        category: category.clone(),
+        hash: None,
+        commit_hash: None,
+        commit_timestamp: 0,
+    };
 
-        // Trace/Tmp handling for hash/timestamp
-        if (category == "trace" || category == "tmp") && components.len() >= 4 {
-            let ts_hash_dir = &components[2];
-            if let Some((ts_str, hash_str)) = ts_hash_dir.split_once('-')
-                && let Ok(ts) = ts_str.parse::<u64>() {
+    // Trace/Tmp handling for hash/timestamp
+    let comp_count = rel_to_mem.components().count();
+    if (category == "trace" || category == "tmp") && comp_count >= 4 {
+        // Need to iterate again or extract specifically the 3rd component
+        let mut comps = rel_to_mem.components();
+        comps.next(); // branch
+        comps.next(); // category
+        if let Some(ts_hash_dir) = comps.next() {
+            let ts_hash_str = ts_hash_dir.as_os_str().to_string_lossy();
+            if let Some((ts_str, hash_str)) = ts_hash_str.split_once('-') {
+                if let Ok(ts) = ts_str.parse::<u64>() {
                     mem_file.commit_timestamp = ts;
                     mem_file.hash = Some(hash_str.to_string());
                     mem_file.commit_hash = Some(hash_str.to_string());
                 }
+            }
         }
-
-        mem_files.push(mem_file);
     }
 
-    // 9. Output
-    if json {
-        println!("{}", serde_json::to_string_pretty(&mem_files)?);
-    }
-
-    Ok(())
+    Some(mem_file)
 }
 
 fn collect_files(dir: &Path) -> Result<Vec<PathBuf>> {
