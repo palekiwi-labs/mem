@@ -44,6 +44,14 @@ fn main() -> anyhow::Result<()> {
 
             commands::add::handle(&cwd, &filename, resolved_content, mem_type, force)?;
         }
+        Commands::List {
+            branch,
+            all,
+            include_gitignored,
+            json,
+        } => {
+            commands::list::handle(&cwd, branch, all, include_gitignored, json)?;
+        }
     }
 
     Ok(())

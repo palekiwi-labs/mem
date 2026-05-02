@@ -40,4 +40,19 @@ pub enum Commands {
         #[arg(long)]
         force: bool,
     },
+    /// List artifacts for a branch
+    List {
+        /// List files for a specific branch instead of current
+        #[arg(long, conflicts_with = "all")]
+        branch: Option<String>,
+        /// List files for all branches
+        #[arg(short = 'a', long)]
+        all: bool,
+        /// Include gitignored categories (tmp, ref)
+        #[arg(short = 'i', long)]
+        include_gitignored: bool,
+        /// Output as JSON
+        #[arg(short = 'j', long)]
+        json: bool,
+    },
 }
