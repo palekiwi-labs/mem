@@ -202,8 +202,9 @@ fn test_log_list() -> anyhow::Result<()> {
         .env("MEM_DIR_NAME", ".test-mem")
         .arg("log")
         .arg("list");
-    
-    cmd.assert().success()
+
+    cmd.assert()
+        .success()
         .stdout(predicate::str::contains("# Project Log"))
         .stdout(predicate::str::contains("My Title"));
 
