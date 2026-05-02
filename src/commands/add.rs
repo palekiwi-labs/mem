@@ -3,7 +3,7 @@ use crate::config::Config;
 use crate::git;
 use anyhow::{bail, Context, Result};
 use std::fs;
-use std::path::Path;
+use std::path::{Component, Path};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn handle(
@@ -31,52 +31,77 @@ pub fn handle(
         );
     }
 
-    // 5. Get current branch
-    let branch = git::get_current_branch(&root)?;
+    // 5. Get current branch (handle no-commits case)
+    let branch = git::get_current_branch(&root)
+        .context("Could not determine current branch. Have you made your first commit yet?")?;
 
     // 6. Resolve destination directory
     let dest_dir = match mem_type {
         MemType::Spec => mem_path.join(&branch).join("spec"),
-        MemType::Trace => {
-            let ts = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-            let hash = git::get_short_head_hash(&root)?;
-            mem_path
-                .join(&branch)
-                .join("trace")
-                .join(format!("{}-{}", ts, hash))
-        }
-        MemType::Tmp => {
-            let ts = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-            let hash = git::get_short_head_hash(&root)?;
-            mem_path
-                .join(&branch)
-                .join("tmp")
-                .join(format!("{}-{}", ts, hash))
-        }
         MemType::Ref => mem_path.join(&branch).join("ref"),
+        MemType::Trace | MemType::Tmp => {
+            let ts = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .context("System time is before Unix epoch")?
+                .as_secs();
+            let hash = git::get_short_head_hash(&root)
+                .context("Could not determine HEAD hash. Have you made your first commit yet?")?;
+            let type_dir = if matches!(mem_type, MemType::Trace) {
+                "trace"
+            } else {
+                "tmp"
+            };
+            mem_path
+                .join(&branch)
+                .join(type_dir)
+                .join(format!("{}-{}", ts, hash))
+        }
     };
+
+    // 7. Validate filename for path traversal
+    validate_filename(filename)?;
 
     let file_path = dest_dir.join(filename);
 
-    // 7. Check if exists
+    // 8. Check if exists
     if file_path.exists() && !force {
         bail!(
             "File exists: {}. Use --force to overwrite.",
-            file_path.to_string_lossy()
+            file_path.display()
         );
     }
 
-    // 8. Create parent dirs
+    // 9. Create parent dirs
     if let Some(parent) = file_path.parent() {
-        fs::create_dir_all(parent)?;
+        fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create directory {}", parent.display()))?;
     }
 
-    // 9. Write file
-    fs::write(&file_path, content.unwrap_or_default())?;
+    // 10. Write file
+    fs::write(&file_path, content.unwrap_or_default())
+        .with_context(|| format!("Failed to write to {}", file_path.display()))?;
 
-    // 10. Print confirmation
+    // 11. Print confirmation
     let rel_path = file_path.strip_prefix(&root).unwrap_or(&file_path);
     println!("✓ Created {}", rel_path.to_string_lossy());
 
+    Ok(())
+}
+
+fn validate_filename(filename: &str) -> Result<()> {
+    for component in Path::new(filename).components() {
+        match component {
+            Component::Normal(_) | Component::CurDir => {}
+            Component::ParentDir => {
+                bail!("Invalid filename '{}': '..' is not allowed", filename)
+            }
+            Component::RootDir | Component::Prefix(_) => {
+                bail!(
+                    "Invalid filename '{}': absolute paths are not allowed",
+                    filename
+                )
+            }
+        }
+    }
     Ok(())
 }

@@ -7,7 +7,7 @@ pub struct Cli {
     pub command: Commands,
 }
 
-#[derive(ValueEnum, Clone, Debug)]
+#[derive(ValueEnum, Clone, Copy, Debug)]
 pub enum MemType {
     Spec,
     Trace,

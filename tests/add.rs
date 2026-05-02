@@ -38,3 +38,256 @@ fn test_add_spec_default() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_add_no_content_empty_file() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    // Initialize mem
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    // Add a file without content
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("empty.txt");
+
+    cmd.assert().success().stdout(predicate::str::contains(
+        "Created .test-mem/main/spec/empty.txt",
+    ));
+
+    let file_path = temp.path().join(".test-mem/main/spec/empty.txt");
+    assert!(file_path.exists());
+    let content = fs::read_to_string(file_path)?;
+    assert!(content.is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn test_add_type_trace() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    // Initialize mem
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    // Add a trace file
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("--type")
+        .arg("trace")
+        .arg("error.log")
+        .arg("stack trace content");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Created .test-mem/main/trace/"));
+
+    // Check if file exists under some timestamped dir
+    let trace_base = temp.path().join(".test-mem/main/trace");
+    let entries = fs::read_dir(trace_base)?;
+    let mut found = false;
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            let file_path = path.join("error.log");
+            if file_path.exists() {
+                let content = fs::read_to_string(file_path)?;
+                assert_eq!(content, "stack trace content");
+                found = true;
+                break;
+            }
+        }
+    }
+    assert!(found, "Trace file not found in any timestamped directory");
+
+    Ok(())
+}
+
+#[test]
+fn test_add_type_tmp() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("-t")
+        .arg("tmp")
+        .arg("session.log")
+        .arg("tmp content");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Created .test-mem/main/tmp/"));
+
+    let tmp_base = temp.path().join(".test-mem/main/tmp");
+    let entries = fs::read_dir(tmp_base)?;
+    let mut found = false;
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            let file_path = path.join("session.log");
+            if file_path.exists() {
+                let content = fs::read_to_string(file_path)?;
+                assert_eq!(content, "tmp content");
+                found = true;
+                break;
+            }
+        }
+    }
+    assert!(found, "Tmp file not found");
+
+    Ok(())
+}
+
+#[test]
+fn test_add_type_ref() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("-t")
+        .arg("ref")
+        .arg("doc.md")
+        .arg("ref content");
+
+    cmd.assert().success().stdout(predicate::str::contains(
+        "Created .test-mem/main/ref/doc.md",
+    ));
+
+    let file_path = temp.path().join(".test-mem/main/ref/doc.md");
+    assert!(file_path.exists());
+    assert_eq!(fs::read_to_string(file_path)?, "ref content");
+
+    Ok(())
+}
+
+#[test]
+fn test_add_force_overwrite() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    // 1. Create file
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("test.txt")
+        .arg("v1");
+    cmd.assert().success();
+
+    // 2. Try overwrite without force
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("test.txt")
+        .arg("v2");
+    cmd.assert().failure().stderr(
+        predicate::str::contains("File exists").and(predicate::str::contains("Use --force")),
+    );
+
+    // 3. Overwrite with force
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("--force")
+        .arg("test.txt")
+        .arg("v2");
+    cmd.assert().success();
+
+    let file_path = temp.path().join(".test-mem/main/spec/test.txt");
+    assert_eq!(fs::read_to_string(file_path)?, "v2");
+
+    Ok(())
+}
+
+#[test]
+fn test_add_rejects_path_traversal() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    // Absolute path
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("/etc/passwd")
+        .arg("hack");
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("absolute paths are not allowed"));
+
+    // Parent dir
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("../outside.txt")
+        .arg("hack");
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("'..' is not allowed"));
+
+    Ok(())
+}
