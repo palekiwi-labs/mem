@@ -41,6 +41,7 @@ pub fn setup_git_repo(dir: &Path) {
         .expect("Failed to git commit");
 }
 
+#[allow(dead_code)]
 pub fn setup_remote(local: &Path, remote: &Path) {
     Command::new("git")
         .args(["init", "--bare"])

@@ -14,7 +14,7 @@ pub fn handle(
     force: bool,
 ) -> Result<()> {
     // 1. Verify git repo
-    git::run_git(&["rev-parse", "--git-dir"], cwd).context("Not in a git repository")?;
+    git::run_git(["rev-parse", "--git-dir"], cwd).context("Not in a git repository")?;
 
     // 2. Get git root
     let root = git::get_git_root(cwd)?;
