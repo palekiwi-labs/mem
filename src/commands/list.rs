@@ -85,16 +85,21 @@ pub fn handle(
             continue;
         }
 
-        let name = path
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_default();
-
         let rel_path = path
             .strip_prefix(&root)
             .unwrap_or(&path)
             .to_string_lossy()
             .to_string();
+
+        if !json {
+            println!("{}", rel_path);
+            continue;
+        }
+
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
 
         let mut mem_file = MemFile {
             path: rel_path,
@@ -123,10 +128,6 @@ pub fn handle(
     // 9. Output
     if json {
         println!("{}", serde_json::to_string_pretty(&mem_files)?);
-    } else {
-        for file in mem_files {
-            println!("{}", file.path);
-        }
     }
 
     Ok(())
