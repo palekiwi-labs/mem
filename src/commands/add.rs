@@ -34,11 +34,12 @@ pub fn handle(
     // 5. Get current branch (handle no-commits case)
     let branch = git::get_current_branch(&root)
         .context("Could not determine current branch. Have you made your first commit yet?")?;
+    let branch_dir = branch.replace(['/', '\\'], "-");
 
     // 6. Resolve destination directory
     let dest_dir = match mem_type {
-        MemType::Spec => mem_path.join(&branch).join("spec"),
-        MemType::Ref => mem_path.join(&branch).join("ref"),
+        MemType::Spec => mem_path.join(&branch_dir).join("spec"),
+        MemType::Ref => mem_path.join(&branch_dir).join("ref"),
         MemType::Trace | MemType::Tmp => {
             let ts = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -52,7 +53,7 @@ pub fn handle(
                 "tmp"
             };
             mem_path
-                .join(&branch)
+                .join(&branch_dir)
                 .join(type_dir)
                 .join(format!("{}-{}", ts, hash))
         }
