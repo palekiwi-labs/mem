@@ -32,9 +32,9 @@ fn test_add_from_file() -> anyhow::Result<()> {
         .arg("--file")
         .arg(&source_file);
 
-    cmd.assert().success().stdout(predicate::str::diff(
-        ".test-mem/main/spec/index.md\n",
-    ));
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::diff(".test-mem/main/spec/index.md\n"));
 
     let file_path = temp.path().join(".test-mem/main/spec/index.md");
     assert!(file_path.exists());
@@ -136,9 +136,9 @@ fn test_add_spec_default() -> anyhow::Result<()> {
         .arg("index.md")
         .arg("Project scope");
 
-    cmd.assert().success().stdout(predicate::str::diff(
-        ".test-mem/main/spec/index.md\n",
-    ));
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::diff(".test-mem/main/spec/index.md\n"));
 
     let file_path = temp.path().join(".test-mem/main/spec/index.md");
     assert!(file_path.exists());
@@ -170,9 +170,9 @@ fn test_add_no_content_empty_file() -> anyhow::Result<()> {
         .arg("empty.txt")
         .arg("");
 
-    cmd.assert().success().stdout(predicate::str::diff(
-        ".test-mem/main/spec/empty.txt\n",
-    ));
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::diff(".test-mem/main/spec/empty.txt\n"));
 
     let file_path = temp.path().join(".test-mem/main/spec/empty.txt");
     assert!(file_path.exists());
@@ -301,13 +301,46 @@ fn test_add_type_ref() -> anyhow::Result<()> {
         .arg("doc.md")
         .arg("ref content");
 
-    cmd.assert().success().stdout(predicate::str::diff(
-        ".test-mem/main/ref/doc.md\n",
-    ));
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::diff(".test-mem/main/ref/doc.md\n"));
 
     let file_path = temp.path().join(".test-mem/main/ref/doc.md");
     assert!(file_path.exists());
     assert_eq!(fs::read_to_string(file_path)?, "ref content");
+
+    Ok(())
+}
+
+#[test]
+fn test_add_type_bin() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("-t")
+        .arg("bin")
+        .arg("tool.sh")
+        .arg("echo hello");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::diff(".test-mem/main/bin/tool.sh\n"));
+
+    let file_path = temp.path().join(".test-mem/main/bin/tool.sh");
+    assert!(file_path.exists());
+    assert_eq!(fs::read_to_string(file_path)?, "echo hello");
 
     Ok(())
 }
