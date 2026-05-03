@@ -13,6 +13,7 @@ pub enum MemType {
     Trace,
     Tmp,
     Ref,
+    Bin,
 }
 
 #[derive(Subcommand)]

@@ -39,6 +39,7 @@ pub fn handle(
     let dest_dir = match mem_type {
         MemType::Spec => mem_path.join(&branch_dir).join("spec"),
         MemType::Ref => mem_path.join(&branch_dir).join("ref"),
+        MemType::Bin => mem_path.join(&branch_dir).join("bin"),
         MemType::Trace | MemType::Tmp => {
             let ts = git::get_head_timestamp(&root)?;
             let hash = git::get_short_head_hash(&root)
