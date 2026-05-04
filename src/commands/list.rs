@@ -145,8 +145,8 @@ fn to_mem_file(path: &Path, mem_path: &Path, root: &Path) -> Option<MemFile> {
 
     let mut mem_file = MemFile {
         path: rel_path,
-        name,
-        branch,
+        name: name.clone(),
+        branch: branch.clone(),
         category: category.clone(),
         hash: None,
         commit_hash: None,
@@ -168,7 +168,19 @@ fn to_mem_file(path: &Path, mem_path: &Path, root: &Path) -> Option<MemFile> {
                 mem_file.commit_timestamp = ts;
                 mem_file.hash = Some(hash_str.to_string());
                 mem_file.commit_hash = Some(hash_str.to_string());
+
+                // For trace/tmp, name is relative to ts-hash dir
+                let prefix = mem_path.join(&branch).join(&category).join(ts_hash_dir);
+                if let Ok(rel_name) = path.strip_prefix(&prefix) {
+                    mem_file.name = rel_name.to_string_lossy().to_string();
+                }
             }
+        }
+    } else {
+        // For spec, bin, ref, name is relative to category dir
+        let prefix = mem_path.join(&branch).join(&category);
+        if let Ok(rel_name) = path.strip_prefix(&prefix) {
+            mem_file.name = rel_name.to_string_lossy().to_string();
         }
     }
 
