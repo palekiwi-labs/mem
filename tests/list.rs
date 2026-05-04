@@ -333,6 +333,96 @@ fn test_list_json_spec() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_list_json_nested_spec() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    // 1. Initialize
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    // 2. Add nested spec file
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("tickets/SB-1234.md")
+        .arg("content");
+    cmd.assert().success();
+
+    // 3. List with --json
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("list")
+        .arg("--json");
+
+    let output = String::from_utf8(cmd.assert().success().get_output().stdout.clone())?;
+    let json: serde_json::Value = serde_json::from_str(&output)?;
+
+    let arr = json.as_array().unwrap();
+    let item = arr
+        .iter()
+        .find(|i| i["path"].as_str().unwrap().contains("SB-1234.md"))
+        .unwrap();
+
+    // This is what we want to fix: it should be "tickets/SB-1234.md"
+    assert_eq!(item["name"], "tickets/SB-1234.md");
+
+    Ok(())
+}
+
+#[test]
+fn test_list_json_nested_trace() -> anyhow::Result<()> {
+    let temp = TempDir::new()?;
+    helpers::setup_git_repo(temp.path());
+
+    // 1. Initialize
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("init");
+    cmd.assert().success();
+
+    // 2. Add nested trace file
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("add")
+        .arg("-t")
+        .arg("trace")
+        .arg("logs/app.log")
+        .arg("trace content");
+    cmd.assert().success();
+
+    // 3. List with --json
+    let mut cmd = Command::cargo_bin("mem")?;
+    cmd.current_dir(temp.path())
+        .env("MEM_BRANCH_NAME", "test-mem")
+        .env("MEM_DIR_NAME", ".test-mem")
+        .arg("list")
+        .arg("--json");
+
+    let output = String::from_utf8(cmd.assert().success().get_output().stdout.clone())?;
+    let json: serde_json::Value = serde_json::from_str(&output)?;
+
+    let arr = json.as_array().unwrap();
+    let item = arr.iter().find(|i| i["category"] == "trace").unwrap();
+
+    assert_eq!(item["name"], "logs/app.log");
+
+    Ok(())
+}
+
+#[test]
 fn test_list_json_trace() -> anyhow::Result<()> {
     let temp = TempDir::new()?;
     helpers::setup_git_repo(temp.path());
