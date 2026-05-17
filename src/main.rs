@@ -57,6 +57,9 @@ fn main() -> anyhow::Result<()> {
         Commands::Log { command } => {
             commands::log::handle(&cwd, command)?;
         }
+        Commands::Context { command } => {
+            commands::context::handle(&cwd, command)?;
+        }
     }
 
     Ok(())
