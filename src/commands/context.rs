@@ -22,9 +22,10 @@ fn handle_init(cwd: &Path, force: bool) -> anyhow::Result<()> {
 }
 
 fn handle_show(cwd: &Path) -> anyhow::Result<()> {
+    let git_root = get_git_root(cwd)?;
     let branch = get_current_branch(cwd)?;
     let sanitized_branch = sanitize_branch_name(&branch);
-    let config_path = context_json_path(cwd, &sanitized_branch);
+    let config_path = context_json_path(&git_root, &sanitized_branch);
 
     let config = load_context_config(&config_path)?;
     println!("{}", serde_json::to_string_pretty(&config)?);
@@ -33,9 +34,10 @@ fn handle_show(cwd: &Path) -> anyhow::Result<()> {
 }
 
 fn handle_profiles(cwd: &Path) -> anyhow::Result<()> {
+    let git_root = get_git_root(cwd)?;
     let branch = get_current_branch(cwd)?;
     let sanitized_branch = sanitize_branch_name(&branch);
-    let config_path = context_json_path(cwd, &sanitized_branch);
+    let config_path = context_json_path(&git_root, &sanitized_branch);
 
     let config = load_context_config(&config_path)?;
     let mut names: Vec<_> = config.keys().collect();
@@ -98,7 +100,7 @@ fn handle_path(cwd: &Path, all: bool) -> anyhow::Result<()> {
     } else {
         let branch = get_current_branch(cwd)?;
         let sanitized_branch = sanitize_branch_name(&branch);
-        let config_path = context_json_path(cwd, &sanitized_branch);
+        let config_path = context_json_path(&git_root, &sanitized_branch);
         if config_path.exists() {
             println!("{}", config_path.display());
         } else {
