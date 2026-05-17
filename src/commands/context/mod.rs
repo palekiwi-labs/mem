@@ -52,28 +52,101 @@ pub fn parse_artifact_path(
     if let Some(rest) = raw.strip_prefix("./") {
         Ok(git_root.join(".mem").join(current_branch_dir).join(rest))
     } else if let Some(rest) = raw.strip_prefix('@') {
-        let (branch, path) = rest.split_once(':').ok_or_else(|| {
-            anyhow::anyhow!(
-                "Invalid cross-branch artifact path: {}. Expected @branch:path",
-                raw
-            )
-        })?;
-
-        if branch.is_empty() || path.is_empty() {
-            anyhow::bail!("Branch and path must not be empty in cross-branch reference");
-        }
+        let (branch, path) = match rest.split_once(':') {
+            Some((b, p)) => (b, p),
+            None => (rest, ""), // Will be handled by caller for include
+        };
 
         if branch.contains('/') || branch.contains('\\') {
-            anyhow::bail!("Branch component in @branch:path must be a sanitized name (no slashes)");
+            anyhow::bail!(
+                "Branch component in cross-branch reference must be a sanitized name (no slashes)"
+            );
         }
 
-        Ok(git_root.join(".mem").join(branch).join(path))
+        if path.is_empty() {
+            // This is just a branch reference, return a path that indicates this
+            Ok(git_root.join(".mem").join(branch))
+        } else {
+            Ok(git_root.join(".mem").join(branch).join(path))
+        }
     } else {
         anyhow::bail!(
             "Unrecognized artifact path format: {}. Use ./... or @branch:path",
             raw
         );
     }
+}
+
+pub fn resolve_profile(
+    branch_dir: &str,
+    profile_name: &str,
+    git_root: &Path,
+    visited: &mut std::collections::HashSet<(String, String)>,
+) -> anyhow::Result<Vec<PathBuf>> {
+    let key = (branch_dir.to_string(), profile_name.to_string());
+    if visited.contains(&key) {
+        anyhow::bail!(
+            "Cycle detected in context profile includes: {}:{}",
+            branch_dir,
+            profile_name
+        );
+    }
+    visited.insert(key);
+
+    let config_path = context_json_path(git_root, branch_dir);
+    let config = match load_context_config(&config_path) {
+        Ok(c) => c,
+        Err(_) => {
+            eprintln!(
+                "Warning: Could not load context for branch {}, skipping",
+                branch_dir
+            );
+            return Ok(Vec::new());
+        }
+    };
+
+    let profile = config.get(profile_name).ok_or_else(|| {
+        anyhow::anyhow!(
+            "Profile '{}' not found in {}",
+            profile_name,
+            config_path.display()
+        )
+    })?;
+
+    let mut accumulator = Vec::new();
+
+    for inc in &profile.include {
+        let (inc_branch, inc_profile) = if let Some(rest) = inc.strip_prefix('@') {
+            match rest.split_once(':') {
+                Some((b, p)) => (b.to_string(), p.to_string()),
+                None => (rest.to_string(), "default".to_string()),
+            }
+        } else {
+            anyhow::bail!(
+                "Invalid include format: {}. Expected @branch or @branch:profile",
+                inc
+            );
+        };
+
+        let inc_paths = resolve_profile(&inc_branch, &inc_profile, git_root, visited)?;
+        accumulator.extend(inc_paths);
+    }
+
+    for art in &profile.artifacts {
+        let path = parse_artifact_path(art, branch_dir, git_root)?;
+        accumulator.push(path);
+    }
+
+    // Deduplicate: first occurrence wins
+    let mut final_paths = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for path in accumulator {
+        if seen.insert(path.clone()) {
+            final_paths.push(path);
+        }
+    }
+
+    Ok(final_paths)
 }
 
 pub fn handle(cwd: &Path, command: ContextCommands) -> anyhow::Result<()> {

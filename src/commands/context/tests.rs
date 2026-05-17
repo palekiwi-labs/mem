@@ -70,4 +70,32 @@ mod tests {
         assert!(parse_artifact_path("@branch_with/slash:spec.md", current, root).is_err());
         assert!(parse_artifact_path("no_prefix.md", current, root).is_err());
     }
+
+    #[test]
+    fn test_resolve_profile_cycle() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+
+        // Setup Cycle: A -> B -> A
+        let branch_a = root.join(".mem").join("A");
+        let branch_b = root.join(".mem").join("B");
+        std::fs::create_dir_all(&branch_a).unwrap();
+        std::fs::create_dir_all(&branch_b).unwrap();
+
+        std::fs::write(
+            branch_a.join("context.json"),
+            r#"{"default": {"include": ["@B"]}}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            branch_b.join("context.json"),
+            r#"{"default": {"include": ["@A"]}}"#,
+        )
+        .unwrap();
+
+        let mut visited = std::collections::HashSet::new();
+        let res = resolve_profile("A", "default", root, &mut visited);
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("Cycle detected"));
+    }
 }
