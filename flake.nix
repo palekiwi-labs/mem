@@ -39,6 +39,7 @@
 
         devShells.default = pkgs.mkShell
           {
+            name = "mem";
             buildInputs = [
               rustToolchain
               pkgs.git
