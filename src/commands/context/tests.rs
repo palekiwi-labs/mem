@@ -69,6 +69,15 @@ mod tests {
         assert!(parse_artifact_path("/absolute.md", current, root).is_err());
         assert!(parse_artifact_path("@branch_with/slash:spec.md", current, root).is_err());
         assert!(parse_artifact_path("no_prefix.md", current, root).is_err());
+
+        // Security bypass attempts (flagged by consultant)
+        assert!(parse_artifact_path(".//etc/passwd", current, root).is_err());
+        assert!(parse_artifact_path("@other:/etc/passwd", current, root).is_err());
+
+        // ParentDir traversal check (flagged by consultant)
+        assert!(parse_artifact_path("./spec/../secret.md", current, root).is_err());
+        // Valid path containing ".." as part of filename (should pass now)
+        assert!(parse_artifact_path("./spec/my..file.md", current, root).is_ok());
     }
 
     #[test]

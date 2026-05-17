@@ -41,20 +41,19 @@ pub fn parse_artifact_path(
     current_branch_dir: &str,
     git_root: &Path,
 ) -> anyhow::Result<PathBuf> {
-    if raw.contains("..") {
+    if Path::new(raw)
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
         anyhow::bail!("Path traversal ('..') is not allowed in artifact paths");
     }
 
-    if Path::new(raw).is_absolute() {
-        anyhow::bail!("Absolute paths are not allowed in artifact paths");
-    }
-
-    if let Some(rest) = raw.strip_prefix("./") {
-        Ok(git_root.join(".mem").join(current_branch_dir).join(rest))
-    } else if let Some(rest) = raw.strip_prefix('@') {
-        let (branch, path) = match rest.split_once(':') {
+    let (base_path, rest) = if let Some(stripped) = raw.strip_prefix("./") {
+        (git_root.join(".mem").join(current_branch_dir), stripped)
+    } else if let Some(stripped) = raw.strip_prefix('@') {
+        let (branch, path) = match stripped.split_once(':') {
             Some((b, p)) => (b, p),
-            None => (rest, ""), // Will be handled by caller for include
+            None => (stripped, ""),
         };
 
         if branch.contains('/') || branch.contains('\\') {
@@ -63,18 +62,19 @@ pub fn parse_artifact_path(
             );
         }
 
-        if path.is_empty() {
-            // This is just a branch reference, return a path that indicates this
-            Ok(git_root.join(".mem").join(branch))
-        } else {
-            Ok(git_root.join(".mem").join(branch).join(path))
-        }
+        (git_root.join(".mem").join(branch), path)
     } else {
         anyhow::bail!(
             "Unrecognized artifact path format: {}. Use ./... or @branch:path",
             raw
         );
+    };
+
+    if Path::new(rest).is_absolute() {
+        anyhow::bail!("Absolute paths are not allowed in artifact paths");
     }
+
+    Ok(base_path.join(rest))
 }
 
 pub fn resolve_profile(
