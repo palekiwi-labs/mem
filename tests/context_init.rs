@@ -1,28 +1,25 @@
 mod helpers;
 
-use assert_cmd::Command;
+use helpers::TestEnv;
 use predicates::prelude::*;
 use std::fs;
-use tempfile::TempDir;
 
 #[test]
 fn test_context_init_auto_populates_spec() -> anyhow::Result<()> {
-    let temp = TempDir::new()?;
-    helpers::setup_git_repo(temp.path());
+    let env = TestEnv::new();
+    helpers::setup_git_repo(env.root());
 
     // Initialize mem
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path()).arg("init").assert().success();
+    env.command().arg("init").assert().success();
 
     // Create some spec files
-    let spec_dir = temp.path().join(".mem").join("main").join("spec");
+    let spec_dir = env.root().join(".mem").join("main").join("spec");
     fs::create_dir_all(&spec_dir)?;
     fs::write(spec_dir.join("index.md"), "# Index")?;
     fs::write(spec_dir.join("plan.md"), "# Plan")?;
 
     // Run mem context init
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path())
+    env.command()
         .arg("context")
         .arg("init")
         .assert()
@@ -30,7 +27,7 @@ fn test_context_init_auto_populates_spec() -> anyhow::Result<()> {
         .stdout(predicate::str::contains("Created .mem/main/context.json"));
 
     // Verify content
-    let context_json = temp.path().join(".mem").join("main").join("context.json");
+    let context_json = env.root().join(".mem").join("main").join("context.json");
     let content = fs::read_to_string(context_json)?;
     let v: serde_json::Value = serde_json::from_str(&content)?;
 
@@ -45,20 +42,18 @@ fn test_context_init_auto_populates_spec() -> anyhow::Result<()> {
 
 #[test]
 fn test_context_init_force_overwrites() -> anyhow::Result<()> {
-    let temp = TempDir::new()?;
-    helpers::setup_git_repo(temp.path());
+    let env = TestEnv::new();
+    helpers::setup_git_repo(env.root());
 
     // Initialize mem
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path()).arg("init").assert().success();
+    env.command().arg("init").assert().success();
 
-    let context_json = temp.path().join(".mem").join("main").join("context.json");
+    let context_json = env.root().join(".mem").join("main").join("context.json");
     fs::create_dir_all(context_json.parent().unwrap())?;
     fs::write(&context_json, "{}")?;
 
     // Run without force should fail
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path())
+    env.command()
         .arg("context")
         .arg("init")
         .assert()
@@ -66,8 +61,7 @@ fn test_context_init_force_overwrites() -> anyhow::Result<()> {
         .stderr(predicate::str::contains("already exists"));
 
     // Run with force should succeed
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path())
+    env.command()
         .arg("context")
         .arg("init")
         .arg("--force")
@@ -82,11 +76,11 @@ fn test_context_init_force_overwrites() -> anyhow::Result<()> {
 
 #[test]
 fn test_context_init_with_template() -> anyhow::Result<()> {
-    let temp = TempDir::new()?;
-    helpers::setup_git_repo(temp.path());
+    let env = TestEnv::new();
+    helpers::setup_git_repo(env.root());
 
     // Create mem.json with context template
-    let mem_json = temp.path().join("mem.json");
+    let mem_json = env.root().join("mem.json");
     fs::write(
         &mem_json,
         r#"{
@@ -100,19 +94,13 @@ fn test_context_init_with_template() -> anyhow::Result<()> {
     )?;
 
     // Initialize mem
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path()).arg("init").assert().success();
+    env.command().arg("init").assert().success();
 
     // Run mem context init
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path())
-        .arg("context")
-        .arg("init")
-        .assert()
-        .success();
+    env.command().arg("context").arg("init").assert().success();
 
     // Verify content matches template
-    let context_json = temp.path().join(".mem").join("main").join("context.json");
+    let context_json = env.root().join(".mem").join("main").join("context.json");
     let content = fs::read_to_string(context_json)?;
     let v: serde_json::Value = serde_json::from_str(&content)?;
 

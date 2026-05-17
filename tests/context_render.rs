@@ -1,27 +1,25 @@
 mod helpers;
 
-use assert_cmd::Command;
+use helpers::TestEnv;
 use predicates::prelude::*;
 use std::fs;
-use tempfile::TempDir;
 
 #[test]
 fn test_context_render_with_globs() -> anyhow::Result<()> {
-    let temp = TempDir::new()?;
-    helpers::setup_git_repo(temp.path());
+    let env = TestEnv::new();
+    helpers::setup_git_repo(env.root());
 
     // Initialize mem
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path()).arg("init").assert().success();
+    env.command().arg("init").assert().success();
 
     // Create some spec files
-    let spec_dir = temp.path().join(".mem").join("main").join("spec");
+    let spec_dir = env.root().join(".mem").join("main").join("spec");
     fs::create_dir_all(&spec_dir)?;
     fs::write(spec_dir.join("1.md"), "content 1")?;
     fs::write(spec_dir.join("2.md"), "content 2")?;
 
     // Create context.json with glob
-    let context_json = temp.path().join(".mem").join("main").join("context.json");
+    let context_json = env.root().join(".mem").join("main").join("context.json");
     fs::write(
         &context_json,
         r#"{
@@ -32,8 +30,7 @@ fn test_context_render_with_globs() -> anyhow::Result<()> {
     )?;
 
     // Run mem context render
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path())
+    env.command()
         .arg("context")
         .arg("render")
         .assert()

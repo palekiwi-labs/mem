@@ -1,20 +1,18 @@
 mod helpers;
 
-use assert_cmd::Command;
+use helpers::TestEnv;
 use predicates::prelude::*;
 use std::fs;
-use tempfile::TempDir;
 
 #[test]
 fn test_context_show_and_profiles() -> anyhow::Result<()> {
-    let temp = TempDir::new()?;
-    helpers::setup_git_repo(temp.path());
+    let env = TestEnv::new();
+    helpers::setup_git_repo(env.root());
 
     // Initialize mem
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path()).arg("init").assert().success();
+    env.command().arg("init").assert().success();
 
-    let context_json = temp.path().join(".mem").join("main").join("context.json");
+    let context_json = env.root().join(".mem").join("main").join("context.json");
     fs::create_dir_all(context_json.parent().unwrap())?;
     fs::write(
         &context_json,
@@ -25,8 +23,7 @@ fn test_context_show_and_profiles() -> anyhow::Result<()> {
     )?;
 
     // Test show
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path())
+    env.command()
         .arg("context")
         .arg("show")
         .assert()
@@ -36,8 +33,7 @@ fn test_context_show_and_profiles() -> anyhow::Result<()> {
         .stdout(predicate::str::contains("brief"));
 
     // Test profiles
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path())
+    env.command()
         .arg("context")
         .arg("profiles")
         .assert()
@@ -49,11 +45,10 @@ fn test_context_show_and_profiles() -> anyhow::Result<()> {
 
 #[test]
 fn test_context_missing_file_errors() -> anyhow::Result<()> {
-    let temp = TempDir::new()?;
-    helpers::setup_git_repo(temp.path());
+    let env = TestEnv::new();
+    helpers::setup_git_repo(env.root());
 
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path())
+    env.command()
         .arg("context")
         .arg("show")
         .assert()

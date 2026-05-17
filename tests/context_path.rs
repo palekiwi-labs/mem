@@ -1,26 +1,23 @@
 mod helpers;
 
-use assert_cmd::Command;
+use helpers::TestEnv;
 use predicates::prelude::*;
 use std::fs;
-use tempfile::TempDir;
 
 #[test]
 fn test_context_path_current() -> anyhow::Result<()> {
-    let temp = TempDir::new()?;
-    helpers::setup_git_repo(temp.path());
+    let env = TestEnv::new();
+    helpers::setup_git_repo(env.root());
 
     // Initialize mem
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path()).arg("init").assert().success();
+    env.command().arg("init").assert().success();
 
-    let context_json = temp.path().join(".mem").join("main").join("context.json");
+    let context_json = env.root().join(".mem").join("main").join("context.json");
     fs::create_dir_all(context_json.parent().unwrap())?;
     fs::write(&context_json, "{}")?;
 
     // Test path
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path())
+    env.command()
         .arg("context")
         .arg("path")
         .assert()
@@ -32,15 +29,14 @@ fn test_context_path_current() -> anyhow::Result<()> {
 
 #[test]
 fn test_context_path_all() -> anyhow::Result<()> {
-    let temp = TempDir::new()?;
-    helpers::setup_git_repo(temp.path());
+    let env = TestEnv::new();
+    helpers::setup_git_repo(env.root());
 
     // Initialize mem
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path()).arg("init").assert().success();
+    env.command().arg("init").assert().success();
 
-    let context_main = temp.path().join(".mem").join("main").join("context.json");
-    let context_feat = temp.path().join(".mem").join("feat").join("context.json");
+    let context_main = env.root().join(".mem").join("main").join("context.json");
+    let context_feat = env.root().join(".mem").join("feat").join("context.json");
 
     fs::create_dir_all(context_main.parent().unwrap())?;
     fs::create_dir_all(context_feat.parent().unwrap())?;
@@ -48,9 +44,8 @@ fn test_context_path_all() -> anyhow::Result<()> {
     fs::write(&context_feat, "{}")?;
 
     // Test path --all
-    let mut cmd = Command::cargo_bin("mem")?;
-    let assert = cmd
-        .current_dir(temp.path())
+    let assert = env
+        .command()
         .arg("context")
         .arg("path")
         .arg("--all")
@@ -66,11 +61,10 @@ fn test_context_path_all() -> anyhow::Result<()> {
 
 #[test]
 fn test_context_path_missing_errors() -> anyhow::Result<()> {
-    let temp = TempDir::new()?;
-    helpers::setup_git_repo(temp.path());
+    let env = TestEnv::new();
+    helpers::setup_git_repo(env.root());
 
-    let mut cmd = Command::cargo_bin("mem")?;
-    cmd.current_dir(temp.path())
+    env.command()
         .arg("context")
         .arg("path")
         .assert()

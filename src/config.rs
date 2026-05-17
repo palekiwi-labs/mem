@@ -1,6 +1,6 @@
 use figment::{
-    Figment,
     providers::{Env, Format, Json, Serialized},
+    Figment,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -46,7 +46,10 @@ impl Config {
     pub fn load(project_root: &Path) -> anyhow::Result<Self> {
         let mut builder = Figment::from(Serialized::defaults(Config::default()));
 
-        if let Ok(home) = std::env::var("HOME") {
+        if let Ok(config_dir) = std::env::var("MEM_CONFIG_DIR") {
+            let global_config = Path::new(&config_dir).join("mem.json");
+            builder = builder.merge(Json::file(global_config));
+        } else if let Ok(home) = std::env::var("HOME") {
             let global_config = Path::new(&home).join(".config/mem/mem.json");
             builder = builder.merge(Json::file(global_config));
         }
