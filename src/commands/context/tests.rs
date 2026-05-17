@@ -107,4 +107,51 @@ mod tests {
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains("Cycle detected"));
     }
+
+    #[test]
+    fn test_resolve_profile_diamond_dependency() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+
+        // Setup Diamond: A -> [B, C], B -> D, C -> D
+        let branch_a = root.join(".mem").join("A");
+        let branch_b = root.join(".mem").join("B");
+        let branch_c = root.join(".mem").join("C");
+        let branch_d = root.join(".mem").join("D");
+        std::fs::create_dir_all(&branch_a).unwrap();
+        std::fs::create_dir_all(&branch_b).unwrap();
+        std::fs::create_dir_all(&branch_c).unwrap();
+        std::fs::create_dir_all(&branch_d).unwrap();
+
+        std::fs::write(
+            branch_a.join("context.json"),
+            r#"{"default": {"include": ["@B", "@C"]}}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            branch_b.join("context.json"),
+            r#"{"default": {"include": ["@D"], "artifacts": ["./spec/b.md"]}}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            branch_c.join("context.json"),
+            r#"{"default": {"include": ["@D"], "artifacts": ["./spec/c.md"]}}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            branch_d.join("context.json"),
+            r#"{"default": {"artifacts": ["./spec/d.md"]}}"#,
+        )
+        .unwrap();
+
+        let mut visited = std::collections::HashSet::new();
+        let res = resolve_profile("A", "default", root, &mut visited).unwrap();
+
+        // Deduplication should ensure D appears once, and DFS ordering
+        // Accumulator: [D, B, D, C] -> Deduplicated: [D, B, C]
+        assert_eq!(res.len(), 3);
+        assert!(res[0].to_str().unwrap().contains("D"));
+        assert!(res[1].to_str().unwrap().contains("B"));
+        assert!(res[2].to_str().unwrap().contains("C"));
+    }
 }

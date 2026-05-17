@@ -91,7 +91,7 @@ pub fn resolve_profile(
             profile_name
         );
     }
-    visited.insert(key);
+    visited.insert(key.clone());
 
     let config_path = context_json_path(git_root, branch_dir);
     let config = match load_context_config(&config_path) {
@@ -101,11 +101,13 @@ pub fn resolve_profile(
                 "Warning: Could not load context for branch {}, skipping",
                 branch_dir
             );
+            visited.remove(&key);
             return Ok(Vec::new());
         }
     };
 
     let profile = config.get(profile_name).ok_or_else(|| {
+        visited.remove(&key);
         anyhow::anyhow!(
             "Profile '{}' not found in {}",
             profile_name,
@@ -122,6 +124,7 @@ pub fn resolve_profile(
                 None => (rest.to_string(), "default".to_string()),
             }
         } else {
+            visited.remove(&key);
             anyhow::bail!(
                 "Invalid include format: {}. Expected @branch or @branch:profile",
                 inc
@@ -136,6 +139,8 @@ pub fn resolve_profile(
         let path = parse_artifact_path(art, branch_dir, git_root)?;
         accumulator.push(path);
     }
+
+    visited.remove(&key);
 
     // Deduplicate: first occurrence wins
     let mut final_paths = Vec::new();
