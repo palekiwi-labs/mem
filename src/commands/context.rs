@@ -9,6 +9,7 @@ pub fn handle(cwd: &Path, command: ContextCommands) -> anyhow::Result<()> {
         ContextCommands::Show => handle_show(cwd),
         ContextCommands::Profiles => handle_profiles(cwd),
         ContextCommands::Render { profile } => handle_render(cwd, profile),
+        ContextCommands::Path { all } => handle_path(cwd, all),
     }
 }
 
@@ -66,6 +67,43 @@ fn handle_render(cwd: &Path, profile: Option<String>) -> anyhow::Result<()> {
 
     if let Some(diff_output) = resolved.diff {
         println!("<diff>\n{}\n</diff>", diff_output);
+    }
+
+    Ok(())
+}
+
+fn handle_path(cwd: &Path, all: bool) -> anyhow::Result<()> {
+    let git_root = get_git_root(cwd)?;
+
+    if all {
+        let mem_dir = git_root.join(".mem");
+        if !mem_dir.exists() {
+            return Ok(());
+        }
+
+        let mut paths = Vec::new();
+        for entry in std::fs::read_dir(mem_dir)? {
+            let entry = entry?;
+            if entry.file_type()?.is_dir() {
+                let context_file = entry.path().join("context.json");
+                if context_file.exists() {
+                    paths.push(context_file);
+                }
+            }
+        }
+        paths.sort();
+        for path in paths {
+            println!("{}", path.display());
+        }
+    } else {
+        let branch = get_current_branch(cwd)?;
+        let sanitized_branch = sanitize_branch_name(&branch);
+        let config_path = context_json_path(cwd, &sanitized_branch);
+        if config_path.exists() {
+            println!("{}", config_path.display());
+        } else {
+            anyhow::bail!("Context file not found for branch: {}", branch);
+        }
     }
 
     Ok(())

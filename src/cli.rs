@@ -94,6 +94,12 @@ pub enum ContextCommands {
         #[arg(short = 'p', long, default_value = "default")]
         profile: Option<String>,
     },
+    /// Print absolute path to context.json
+    Path {
+        /// Show paths for all branches
+        #[arg(short = 'a', long)]
+        all: bool,
+    },
 }
 
 #[derive(Subcommand)]
