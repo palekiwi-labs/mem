@@ -18,6 +18,43 @@ pub struct ResolvedContext {
     pub instructions: Option<String>,
 }
 
+pub fn resolve_base_branch_name(flag_base: Option<&str>) -> anyhow::Result<Option<String>> {
+    if let Some(base) = flag_base {
+        return Ok(Some(base.to_string()));
+    }
+
+    if let Ok(file_path) = std::env::var("MEM_BASE_BRANCH_FILE") {
+        let content = std::fs::read_to_string(&file_path).map_err(|e| {
+            anyhow::anyhow!(
+                "Failed to read base branch from MEM_BASE_BRANCH_FILE ({}): {}",
+                file_path,
+                e
+            )
+        })?;
+
+        let first_line = content.lines().next().unwrap_or("").trim();
+        if first_line.is_empty() {
+            anyhow::bail!(
+                "Base branch file specified by MEM_BASE_BRANCH_FILE ({}) is empty",
+                file_path
+            );
+        }
+
+        // Basic sanitization: no path traversal or suspicious characters
+        if first_line.contains("..") || first_line.contains('/') || first_line.contains('\\') {
+            anyhow::bail!(
+                "Invalid base branch name read from {}: {}",
+                file_path,
+                first_line
+            );
+        }
+
+        return Ok(Some(first_line.to_string()));
+    }
+
+    Ok(None)
+}
+
 pub fn context_json_path(root: &Path, branch_dir: &str) -> PathBuf {
     root.join(".mem").join(branch_dir).join("context.json")
 }
@@ -47,7 +84,7 @@ pub fn parse_artifact_path(
         let resolved_branch = if b == "base" {
             let base = base_branch.ok_or_else(|| {
                 anyhow::anyhow!(
-                    "Context profile uses '@base' in artifact path, but no --base branch was provided."
+                    "Context profile uses '@base' in artifact path, but no --base branch or MEM_BASE_BRANCH_FILE was provided."
                 )
             })?;
             sanitize_branch_name(base)
@@ -136,7 +173,7 @@ pub fn resolve_profile(
                     let resolved_branch = if b == "base" {
                         let base = base_branch.ok_or_else(|| {
                             anyhow::anyhow!(
-                                "Context profile uses '@base' in include, but no --base branch was provided."
+                                "Context profile uses '@base' in include, but no --base branch or MEM_BASE_BRANCH_FILE was provided."
                             )
                         })?;
                         sanitize_branch_name(base)
@@ -150,7 +187,7 @@ pub fn resolve_profile(
                     let resolved_branch = if branch == "base" {
                         let base = base_branch.ok_or_else(|| {
                             anyhow::anyhow!(
-                                "Context profile uses '@base' in include, but no --base branch was provided."
+                                "Context profile uses '@base' in include, but no --base branch or MEM_BASE_BRANCH_FILE was provided."
                             )
                         })?;
                         sanitize_branch_name(base)
@@ -213,6 +250,9 @@ pub fn gather_context(
     profile_name: Option<&str>,
     base_branch: Option<&str>,
 ) -> anyhow::Result<ResolvedContext> {
+    let base_branch = resolve_base_branch_name(base_branch)?;
+    let base_branch_ref = base_branch.as_deref();
+
     let profile_name = profile_name.unwrap_or("default");
     let branch = get_current_branch(cwd)?;
     let sanitized_branch = sanitize_branch_name(&branch);
@@ -226,7 +266,7 @@ pub fn gather_context(
         profile_name,
         &git_root,
         &mut visited,
-        base_branch,
+        base_branch_ref,
     )?;
 
     let mut artifacts = Vec::new();
@@ -278,11 +318,11 @@ pub fn gather_context(
         let mut diff_string = diff_args.to_string();
 
         if diff_string.contains("@base") {
-            if let Some(base) = base_branch {
+            if let Some(base) = base_branch_ref {
                 diff_string = diff_string.replace("@base", base);
             } else {
                 anyhow::bail!(
-                    "Context profile uses '@base' in diff, but no --base branch was provided."
+                    "Context profile uses '@base' in diff, but no --base branch or MEM_BASE_BRANCH_FILE was provided."
                 );
             }
         }
@@ -310,6 +350,9 @@ pub fn gather_context(
                 diff = Some(diff_output);
             }
             Err(e) => {
+                if diff_string.contains("@base") || diff_string.contains("..") {
+                    anyhow::bail!("git diff failed: {}", e);
+                }
                 eprintln!("Warning: git diff failed: {}", e);
             }
         }
@@ -629,6 +672,19 @@ mod tests {
             .collect();
         file_names.sort();
         assert_eq!(file_names, vec!["1.md", "2.md"]);
+    }
+
+    #[test]
+    fn test_resolve_base_branch_name_flag_priority() {
+        // Flag should take priority over env var
+        let res = resolve_base_branch_name(Some("from-flag")).unwrap();
+        assert_eq!(res, Some("from-flag".to_string()));
+    }
+
+    #[test]
+    fn test_resolve_base_branch_name_none() {
+        let res = resolve_base_branch_name(None).unwrap();
+        assert_eq!(res, None);
     }
 
     #[test]

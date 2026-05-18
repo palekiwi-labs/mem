@@ -55,8 +55,69 @@ fn test_context_render_with_base_sigil() -> anyhow::Result<()> {
         .assert()
         .failure()
         .stderr(predicate::str::contains(
-            "uses '@base' in diff, but no --base branch was provided",
+            "uses '@base' in diff, but no --base branch or MEM_BASE_BRANCH_FILE was provided",
         ));
+
+    Ok(())
+}
+
+#[test]
+fn test_context_render_with_mem_base_branch_file() -> anyhow::Result<()> {
+    let env = TestEnv::new();
+    helpers::setup_git_repo(env.root());
+
+    // Create a dummy file and commit it on main
+    fs::write(env.root().join("file.txt"), "original")?;
+    run_git(env.root(), &["add", "file.txt"])?;
+    run_git(env.root(), &["commit", "-m", "initial"])?;
+
+    // Create a branch and modify the file
+    run_git(env.root(), &["checkout", "-b", "feature"])?;
+    fs::write(env.root().join("file.txt"), "modified")?;
+    run_git(env.root(), &["add", "file.txt"])?;
+    run_git(env.root(), &["commit", "-m", "feature change"])?;
+
+    // Initialize mem
+    env.command().arg("init").assert().success();
+
+    // Create context.json with @base sigil
+    let context_json = env.root().join(".mem").join("feature").join("context.json");
+    fs::create_dir_all(context_json.parent().unwrap())?;
+    fs::write(
+        &context_json,
+        r#"{
+        "default": {
+            "artifacts": [],
+            "diff": "@base...HEAD"
+        }
+    }"#,
+    )?;
+
+    // Create a base branch file
+    let base_file = env.root().join("base_branch.txt");
+    fs::write(&base_file, "main\n")?;
+
+    // Run mem context render using MEM_BASE_BRANCH_FILE
+    env.command()
+        .arg("context")
+        .arg("render")
+        .env("MEM_BASE_BRANCH_FILE", &base_file)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("<diff>"))
+        .stdout(predicate::str::contains("+modified"))
+        .stdout(predicate::str::contains("-original"));
+
+    // Verify --base flag overrides MEM_BASE_BRANCH_FILE
+    // (If we use a non-existent branch, it should fail)
+    env.command()
+        .arg("context")
+        .arg("render")
+        .arg("--base")
+        .arg("non-existent")
+        .env("MEM_BASE_BRANCH_FILE", &base_file)
+        .assert()
+        .failure();
 
     Ok(())
 }
@@ -127,7 +188,7 @@ fn test_context_render_with_base_sigil_in_artifacts_and_include() -> anyhow::Res
         .assert()
         .failure()
         .stderr(predicate::str::contains(
-            "uses '@base' in artifact path, but no --base branch was provided",
+            "uses '@base' in artifact path, but no --base branch or MEM_BASE_BRANCH_FILE was provided",
         ));
 
     // Run without --base should fail for includes
@@ -145,7 +206,7 @@ fn test_context_render_with_base_sigil_in_artifacts_and_include() -> anyhow::Res
         .assert()
         .failure()
         .stderr(predicate::str::contains(
-            "uses '@base' in include, but no --base branch was provided",
+            "uses '@base' in include, but no --base branch or MEM_BASE_BRANCH_FILE was provided",
         ));
 
     Ok(())
