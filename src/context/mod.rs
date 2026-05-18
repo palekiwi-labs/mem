@@ -171,7 +171,11 @@ pub fn resolve_profile(
     Ok(final_paths)
 }
 
-pub fn gather_context(cwd: &Path, profile_name: Option<&str>) -> anyhow::Result<ResolvedContext> {
+pub fn gather_context(
+    cwd: &Path,
+    profile_name: Option<&str>,
+    base_branch: Option<&str>,
+) -> anyhow::Result<ResolvedContext> {
     let profile_name = profile_name.unwrap_or("default");
     let branch = get_current_branch(cwd)?;
     let sanitized_branch = sanitize_branch_name(&branch);
@@ -228,8 +232,20 @@ pub fn gather_context(cwd: &Path, profile_name: Option<&str>) -> anyhow::Result<
 
     let mut diff = None;
     if let Some(diff_args) = &profile_obj.diff {
+        let mut diff_string = diff_args.to_string();
+
+        if diff_string.contains("@base") {
+            if let Some(base) = base_branch {
+                diff_string = diff_string.replace("@base", base);
+            } else {
+                anyhow::bail!(
+                    "Context profile uses '@base' in diff, but no --base branch was provided."
+                );
+            }
+        }
+
         let mut args = vec!["diff"];
-        let split_args: Vec<&str> = diff_args.split_whitespace().collect();
+        let split_args: Vec<&str> = diff_string.split_whitespace().collect();
         args.extend(split_args.iter().cloned());
 
         // Apply diff_exclude_paths

@@ -27,8 +27,6 @@ pub struct Config {
     #[serde(default)]
     pub diff_exclude_paths: Vec<String>,
     #[serde(default)]
-    pub base_branch_cmd: Option<String>,
-    #[serde(default)]
     pub context: ContextConfig,
 }
 
@@ -38,7 +36,6 @@ impl Default for Config {
             branch_name: "mem".into(),
             dir_name: ".mem".into(),
             diff_exclude_paths: Vec::new(),
-            base_branch_cmd: None,
             context: HashMap::new(),
         }
     }
