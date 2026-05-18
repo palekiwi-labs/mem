@@ -35,6 +35,7 @@ pub fn parse_artifact_path(
     raw: &str,
     current_branch_dir: &str,
     git_root: &Path,
+    base_branch: Option<&str>,
 ) -> anyhow::Result<PathBuf> {
     let (branch, rest) = if let Some(stripped) = raw.strip_prefix('@') {
         // Cross-branch reference
@@ -43,21 +44,31 @@ pub fn parse_artifact_path(
             None => (stripped, ""),
         };
 
-        if b.contains('/') || b.contains('\\') {
-            anyhow::bail!(
-                "Branch component in cross-branch reference must be a sanitized name (no slashes)"
-            );
-        }
+        let resolved_branch = if b == "base" {
+            let base = base_branch.ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Context profile uses '@base' in artifact path, but no --base branch was provided."
+                )
+            })?;
+            sanitize_branch_name(base)
+        } else {
+            if b.contains('/') || b.contains('\\') {
+                anyhow::bail!(
+                    "Branch component in cross-branch reference must be a sanitized name (no slashes)"
+                );
+            }
+            b.to_string()
+        };
 
-        (b, p)
+        (resolved_branch, p.to_string())
     } else {
         // Local artifact. Defaults to current branch.
         // We optionally strip a leading "./" for cleaner aesthetics.
         let p = raw.strip_prefix("./").unwrap_or(raw);
-        (current_branch_dir, p)
+        (current_branch_dir.to_string(), p.to_string())
     };
 
-    let rest_path = Path::new(rest);
+    let rest_path = Path::new(&rest);
 
     // Prevent base path overwrite via `join`
     if rest_path.has_root() {
@@ -136,7 +147,7 @@ pub fn resolve_profile(
     }
 
     for art in &profile.artifacts {
-        let path = parse_artifact_path(art, branch_dir, git_root)?;
+        let path = parse_artifact_path(art, branch_dir, git_root, None)?;
 
         if art.contains('*') || art.contains('?') || art.contains('[') {
             let pattern = path.to_string_lossy();
@@ -398,15 +409,15 @@ mod tests {
         let current = "feat-ctx";
 
         // Current branch with ./
-        let path = parse_artifact_path("./spec/index.md", current, root).unwrap();
+        let path = parse_artifact_path("./spec/index.md", current, root, None).unwrap();
         assert_eq!(path, root.join(".mem").join(current).join("spec/index.md"));
 
         // Current branch without prefix
-        let path = parse_artifact_path("spec/plan.md", current, root).unwrap();
+        let path = parse_artifact_path("spec/plan.md", current, root, None).unwrap();
         assert_eq!(path, root.join(".mem").join(current).join("spec/plan.md"));
 
         // Current branch with parent traversal (allowed now)
-        let path = parse_artifact_path("../master/spec/index.md", current, root).unwrap();
+        let path = parse_artifact_path("../master/spec/index.md", current, root, None).unwrap();
         assert_eq!(
             path,
             root.join(".mem")
@@ -415,29 +426,42 @@ mod tests {
         );
 
         // Cross branch
-        let path = parse_artifact_path("@other:spec/plan.md", current, root).unwrap();
+        let path = parse_artifact_path("@other:spec/plan.md", current, root, None).unwrap();
         assert_eq!(path, root.join(".mem").join("other").join("spec/plan.md"));
+
+        // Cross branch with @base
+        let path = parse_artifact_path("@base:spec/plan.md", current, root, Some("main")).unwrap();
+        assert_eq!(path, root.join(".mem").join("main").join("spec/plan.md"));
+
+        // Cross branch with @base requiring sanitization
+        let path =
+            parse_artifact_path("@base:spec/plan.md", current, root, Some("feature/foo")).unwrap();
+        assert_eq!(
+            path,
+            root.join(".mem").join("feature-foo").join("spec/plan.md")
+        );
 
         // Cross branch with colon in branch name (This will now fail or split differently)
         // Since git doesn't allow colons, we don't need to support them.
         // But let's see how our split_once handles it.
-        let path = parse_artifact_path("@feat:context:spec/index.md", current, root).unwrap();
+        let path = parse_artifact_path("@feat:context:spec/index.md", current, root, None).unwrap();
         assert_eq!(
             path,
             root.join(".mem").join("feat").join("context:spec/index.md")
         );
 
         // Cross branch without path
-        let path = parse_artifact_path("@other", current, root).unwrap();
+        let path = parse_artifact_path("@other", current, root, None).unwrap();
         assert_eq!(path, root.join(".mem").join("other").join(""));
 
         // Failures
-        assert!(parse_artifact_path("/absolute.md", current, root).is_err());
-        assert!(parse_artifact_path("@branch_with/slash:spec.md", current, root).is_err());
-        assert!(parse_artifact_path("@other:/etc/passwd", current, root).is_err());
+        assert!(parse_artifact_path("/absolute.md", current, root, None).is_err());
+        assert!(parse_artifact_path("@branch_with/slash:spec.md", current, root, None).is_err());
+        assert!(parse_artifact_path("@other:/etc/passwd", current, root, None).is_err());
+        assert!(parse_artifact_path("@base:spec/index.md", current, root, None).is_err());
 
         // Valid path containing ".." as part of filename
-        assert!(parse_artifact_path("./spec/my..file.md", current, root).is_ok());
+        assert!(parse_artifact_path("./spec/my..file.md", current, root, None).is_ok());
     }
 
     #[test]
