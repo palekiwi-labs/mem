@@ -12,6 +12,7 @@ arboard = "3.6.1"
 image = { version = "0.25", features = ["png", "jpeg"] }
 serde_json = "1"
 glob = "0.3.1"
+dirs = "6.0.0"
 
 [dev-dependencies]
 assert_cmd = "2.2.1"
